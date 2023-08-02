@@ -1,13 +1,12 @@
 use clap::Parser;
-use llm::{self, ModelParameters};
-use std::{convert::Infallible, io::Write, path::PathBuf};
+use cria::run_webserver;
+use std::error::Error;
+use std::{convert::Infallible, io::Write, path::PathBuf, sync::TryLockError};
 
 #[derive(Parser)]
 struct Args {
     model_architecture: llm::ModelArchitecture,
     model_path: PathBuf,
-    #[arg(long, short = 'p')]
-    prompt: Option<String>,
     #[arg(long, short = 'v')]
     pub tokenizer_path: Option<PathBuf>,
     #[arg(long, short = 'r')]
@@ -26,68 +25,16 @@ impl Args {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Args::parse();
 
     let tokenizer_source = args.to_tokenizer_source();
-    let model_architecture = args.model_architecture;
-    let model_path = args.model_path;
-    let prompt = args
-        .prompt
-        .as_deref()
-        .unwrap_or("Rust is a cool programming language because");
-
-    let now = std::time::Instant::now();
-
-    let model = llm::load_dynamic(
-        Some(model_architecture),
-        &model_path,
-        tokenizer_source,
-        ModelParameters {
-            prefer_mmap: true,
-            context_size: 2048,
-            lora_adapters: None,
-            use_gpu: true,
-            gpu_layers: Some(32),
-            rope_overrides: None,
-        },
-        llm::load_progress_callback_stdout,
-    )
-    .unwrap_or_else(|err| {
-        panic!("Failed to load {model_architecture} model from {model_path:?}: {err}")
-    });
-
-    println!(
-        "Model fully loaded! Elapsed: {}ms",
-        now.elapsed().as_millis()
-    );
-
-    let mut session = model.start_session(Default::default());
-
-    let res = session.infer::<Infallible>(
-        model.as_ref(),
-        &mut rand::thread_rng(),
-        &llm::InferenceRequest {
-            prompt: prompt.into(),
-            parameters: &llm::InferenceParameters::default(),
-            play_back_previous_tokens: false,
-            maximum_token_count: None,
-        },
-        // OutputRequest
-        &mut Default::default(),
-        |r| match r {
-            llm::InferenceResponse::PromptToken(t) | llm::InferenceResponse::InferredToken(t) => {
-                print!("{t}");
-                std::io::stdout().flush().unwrap();
-
-                Ok(llm::InferenceFeedback::Continue)
-            }
-            _ => Ok(llm::InferenceFeedback::Continue),
-        },
-    );
-
-    match res {
-        Ok(result) => println!("\n\nInference stats:\n{result}"),
-        Err(err) => println!("\n{err}"),
-    }
+    let Args {
+        model_architecture,
+        model_path,
+        tokenizer_path,
+        tokenizer_repository,
+    } = args;
+    run_webserver(model_architecture, model_path, tokenizer_source).await;
 }

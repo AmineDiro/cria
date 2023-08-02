@@ -4,10 +4,10 @@ The objective is to serve a local llama 2 model by mimicking an OpenAI API servi
 
 ## TODO :
 
-- [ ] Run Llama.cpp on CPU using llm-chain
-- [ ] Run Llama.cpp on GPU using llm-chain
-- [ ] Implement `/models` route
-- [ ] Implement `/embeddings` route
+- [x] Run Llama.cpp on CPU using llm-chain
+- [x] Run Llama.cpp on GPU using llm-chain
+- [x] Implement `/models` route
+- [ ] Implement `/completions` route
 - [ ] Implement route
 
 ## Routes
