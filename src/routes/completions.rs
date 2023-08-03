@@ -145,23 +145,6 @@ fn default_microstat_eta() -> f32 {
     0.1
 }
 
-// {
-//                         "id": completion_id,
-//                         "object": "text_completion",
-//                         "created": created,
-//                         "model": model_name,
-//                         "choices": [
-//                             {
-//                                 "text": self.detokenize([token]).decode(
-//                                     "utf-8", errors="ignore"
-//                                 ),
-//                                 "index": 0,
-//                                 "logprobs": logprobs_or_none,
-//                                 "finish_reason": "length",
-//                             }
-//                         ],
-//                     }
-
 #[derive(Serialize, Debug)]
 enum FinishReason {
     Stop,
