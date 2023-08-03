@@ -413,9 +413,11 @@ dependencies = [
  "axum",
  "clap",
  "llm",
+ "llm-llama 0.1.1",
  "rand",
  "serde",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -767,11 +769,30 @@ dependencies = [
 
 [[package]]
 name = "ggml"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67c7ab58e14ee56b10c892506eaa1e7d6524b95924b85c53d805830207dde1d0"
+dependencies = [
+ "ggml-sys 0.1.1",
+ "thiserror",
+]
+
+[[package]]
+name = "ggml"
 version = "0.2.0-dev"
 dependencies = [
- "ggml-sys",
+ "ggml-sys 0.2.0-dev",
  "memmap2",
  "thiserror",
+]
+
+[[package]]
+name = "ggml-sys"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78f1b6a53a659486cf4938f31993295be0189da3acd5b35ea2f41d91957e5d83"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
@@ -1047,12 +1068,12 @@ checksum = "09fc20d2ca12cb9f044c93e3bd6d32d523e6e2ec3db4f7b2939cd99026ecd3f0"
 name = "llm"
 version = "0.2.0-dev"
 dependencies = [
- "llm-base",
+ "llm-base 0.2.0-dev",
  "llm-bloom",
  "llm-gpt2",
  "llm-gptj",
  "llm-gptneox",
- "llm-llama",
+ "llm-llama 0.2.0-dev",
  "llm-mpt",
  "serde",
  "tracing",
@@ -1060,10 +1081,27 @@ dependencies = [
 
 [[package]]
 name = "llm-base"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79756dcf95aec564245d422a4e7e6552fe53432bf3e42a377a4e26450b6e8da9"
+dependencies = [
+ "bytemuck",
+ "ggml 0.1.1",
+ "half",
+ "memmap2",
+ "partial_sort",
+ "rand",
+ "serde",
+ "serde_bytes",
+ "thiserror",
+]
+
+[[package]]
+name = "llm-base"
 version = "0.2.0-dev"
 dependencies = [
  "bytemuck",
- "ggml",
+ "ggml 0.2.0-dev",
  "half",
  "memmap2",
  "partial_sort",
@@ -1080,7 +1118,7 @@ dependencies = [
 name = "llm-bloom"
 version = "0.2.0-dev"
 dependencies = [
- "llm-base",
+ "llm-base 0.2.0-dev",
 ]
 
 [[package]]
@@ -1088,28 +1126,40 @@ name = "llm-gpt2"
 version = "0.2.0-dev"
 dependencies = [
  "bytemuck",
- "llm-base",
+ "llm-base 0.2.0-dev",
 ]
 
 [[package]]
 name = "llm-gptj"
 version = "0.2.0-dev"
 dependencies = [
- "llm-base",
+ "llm-base 0.2.0-dev",
 ]
 
 [[package]]
 name = "llm-gptneox"
 version = "0.2.0-dev"
 dependencies = [
- "llm-base",
+ "llm-base 0.2.0-dev",
+]
+
+[[package]]
+name = "llm-llama"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0f0fc6123ad40a602584f9989608f47fe74fa7e546712997b30e0b149c3c34d"
+dependencies = [
+ "bytemuck",
+ "llm-base 0.1.1",
+ "rand",
+ "thiserror",
 ]
 
 [[package]]
 name = "llm-llama"
 version = "0.2.0-dev"
 dependencies = [
- "llm-base",
+ "llm-base 0.2.0-dev",
  "tracing",
 ]
 
@@ -1117,7 +1167,7 @@ dependencies = [
 name = "llm-mpt"
 version = "0.2.0-dev"
 dependencies = [
- "llm-base",
+ "llm-base 0.2.0-dev",
 ]
 
 [[package]]
@@ -2185,6 +2235,15 @@ name = "utf8parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
+
+[[package]]
+name = "uuid"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79daa5ed5740825c40b389c5e50312b9c86df53fccd33f281df655642b43869d"
+dependencies = [
+ "getrandom",
+]
 
 [[package]]
 name = "vcpkg"
