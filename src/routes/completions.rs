@@ -1,22 +1,105 @@
-use axum::{Extension, Json};
-use llm::{samplers::TopPTopK, TokenBias};
+use async_stream::stream;
+use axum::extract::State;
+use axum::response::sse::{KeepAlive, Sse};
+use axum::{response::sse::Event, Json};
+use futures::Stream;
+use llm::TokenUtf8Buffer;
+use llm::{feed_prompt_callback, samplers::TopPTopK, InferenceError, InferenceFeedback, TokenBias};
 use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
 
 use crate::*;
 
+pub async fn completions_stream(
+    State(model): State<Arc<dyn Model>>,
+    Json(request): Json<CompletionRequest>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let mut session: llm::InferenceSession = model.start_session(Default::default());
+    let mut response_tokens: Vec<String> = Vec::new();
+    let maximum_token_count = request.max_tokens.min(usize::MAX);
+
+    let stream = stream! {
+    let prompt = request.prompt.into_iter().collect::<String>();
+    if !prompt.is_empty() {
+        session
+            .feed_prompt(
+                &*model,
+                llm::Prompt::Text(&prompt),
+                &mut Default::default(),
+                feed_prompt_callback::<_>(|r| match r {
+                    llm::InferenceResponse::PromptToken(_) => {
+                        Ok::<InferenceFeedback, InferenceError>(llm::InferenceFeedback::Continue)
+                    }
+                    llm::InferenceResponse::InferredToken(t) => {
+                        let _ = &response_tokens.push(t);
+                        Ok(llm::InferenceFeedback::Continue)
+                    }
+                    _ => Ok(llm::InferenceFeedback::Continue),
+                }),
+            )
+            .unwrap();
+    }
+    // After the prompt is consumed, sample tokens by repeatedly calling
+    // `infer_next_token`. We generate tokens until the model returns an
+    // EndOfText token, or we run out of space in the context window,
+    // or we reach the specified limit.
+    let mut tokens_processed = 0;
+    let mut token_utf8_buf = TokenUtf8Buffer::new();
+    while tokens_processed < maximum_token_count {
+        let token = match session.infer_next_token(
+            &*model,
+            &llm::InferenceParameters {
+                sampler: Arc::new(TopPTopK {
+                    top_k: request.top_k,
+                    top_p: request.top_p,
+                    repeat_penalty: request.repeat_penalty,
+                    temperature: request.temperature,
+                    bias_tokens: TokenBias::empty(),
+                    repetition_penalty_last_n: 512, // TODO : where is this used in LLAMA ?
+                }),
+            },
+            &mut Default::default(),
+            &mut rand::thread_rng(),
+        ) {
+            Ok(token) => token,
+            Err(InferenceError::EndOfText) => break,
+            // TODO: Handle actual errors
+            Err(_) => break,
+        };
+        tokens_processed += 1;
+        // Buffer the token until it's valid UTF-8, then call the callback.
+        if let Some(tokens) = token_utf8_buf.push(&token) {
+            yield Ok(Event::default().json_data(CompletionResponse{
+                id: format!("cmpl-{}", Uuid::new_v4().to_string()),
+                object: "text.completion.chunk".to_string(),
+                model:"llama-2".to_string(),
+                choices: vec![ CompletionResponseChoices {
+                            text: tokens,
+                            index:0,
+                            // TODO : Figure out what to return here
+                            logprobs: None,
+                            finish_reason: None,
+                        }
+                    ],
+                usage: None,
+            }).unwrap());
+        }
+    }
+    };
+
+    Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
 pub async fn completions(
-    Extension(model): Extension<Arc<dyn Model>>,
+    State(model): State<Arc<dyn Model>>,
     Json(request): Json<CompletionRequest>,
 ) -> Json<CompletionResponse> {
     let mut session: llm::InferenceSession = model.start_session(Default::default());
     let mut response_tokens: Vec<String> = Vec::new();
-    // TODO : batch this
-    dbg!(&request);
-    for prompt in request.prompt {
-        dbg!(&prompt);
-        let _ = session.infer::<Infallible>(
+    let prompt = request.prompt.into_iter().collect::<String>();
+    let stats = session
+        .infer::<Infallible>(
             &*model,
             &mut rand::thread_rng(),
             &llm::InferenceRequest {
@@ -36,16 +119,15 @@ pub async fn completions(
             },
             &mut Default::default(),
             |r| match r {
-                llm::InferenceResponse::PromptToken(t)
-                | llm::InferenceResponse::InferredToken(t) => {
+                llm::InferenceResponse::PromptToken(_) => Ok(llm::InferenceFeedback::Continue),
+                llm::InferenceResponse::InferredToken(t) => {
                     let _ = &response_tokens.push(t);
                     Ok(llm::InferenceFeedback::Continue)
                 }
                 _ => Ok(llm::InferenceFeedback::Continue),
             },
-        );
-    }
-    println!("{:?}", response_tokens);
+        )
+        .unwrap();
     Json(CompletionResponse {
         id: format!("cmpl-{}", Uuid::new_v4().to_string()),
         object: "text_completion".to_string(),
@@ -54,8 +136,13 @@ pub async fn completions(
             text: response_tokens.into_iter().collect::<String>(),
             index: 0,
             logprobs: None,
-            finish_reason: FinishReason::Length,
+            finish_reason: Some(FinishReason::Length), // TODO: stop or length
         }],
+        usage: Some(CompletionResponseUsage {
+            prompt_tokens: stats.prompt_tokens,
+            completion_tokens: stats.predict_tokens,
+            total_tokens: stats.prompt_tokens + stats.predict_tokens,
+        }),
     })
 }
 #[derive(Deserialize, Debug)]
@@ -64,6 +151,7 @@ enum LogitBias {
     Tokens,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct CompletionRequest {
     #[serde(default, deserialize_with = "string_or_seq_string")]
@@ -150,13 +238,19 @@ enum FinishReason {
     Stop,
     Length,
 }
+#[derive(Serialize, Debug, Default)]
+struct CompletionResponseUsage {
+    prompt_tokens: usize,
+    completion_tokens: usize,
+    total_tokens: usize,
+}
 #[derive(Serialize, Debug)]
 struct CompletionResponseChoices {
     text: String,
     index: usize,
     // TODO : Figure out what to return here
     logprobs: Option<()>,
-    finish_reason: FinishReason,
+    finish_reason: Option<FinishReason>,
 }
 
 #[derive(Serialize, Debug)]
@@ -165,4 +259,20 @@ pub struct CompletionResponse {
     object: String,
     model: String,
     choices: Vec<CompletionResponseChoices>,
+    usage: Option<CompletionResponseUsage>,
 }
+// {
+//   "choices": [
+//     {
+//       "delta": {
+//         "role": "assistant"
+//       },
+//       "finish_reason": null,
+//       "index": 0
+//     }
+//   ],
+//   "created": 1677825464,
+//   "id": "chatcmpl-6ptKyqKOGXZT6iQnqiXAH8adNLUzD",
+//   "model": "gpt-3.5-turbo-0301",
+//   "object": "chat.completion.chunk"
+// }

@@ -6,13 +6,19 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-stream = "0.3.5"
 axum = "0.6.19"
 clap = { version = "4.3.19", features = ["derive"] }
+futures = "0.3.28"
 llm = { path = "/home/amine/Documents/coding/llm/crates/llm" , features=["cublas"]}
 llm-llama = "0.1.1"
 rand = "0.8.5"
 serde = { version = "1.0.179", features = ["derive"] }
 tokio = { version = "1.29.1", features = ["full"] }
+tokio-stream = "0.1.14"
+tower-http = { version = "0.4.0", features = ["trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 uuid = { version = "1.4.1", features = ["v4"] }
 
 [profile.dev.package.ggml-sys]

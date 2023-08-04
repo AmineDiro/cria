@@ -1,16 +1,20 @@
 use axum::{
     routing::{get, post},
-    Extension, Router,
+    Router,
 };
-use llm::{InferenceError, InferenceStats, Model, ModelParameters, TokenizerSource};
+use llm::{Model, ModelParameters, TokenizerSource};
 use serde::de;
 use serde::Serialize;
 use serde::{Deserialize, Deserializer};
 use std::marker::PhantomData;
-use std::{convert::Infallible, io::Write, path::PathBuf};
+use std::{convert::Infallible, path::PathBuf};
 use std::{fmt, sync::Arc};
+use tower_http::trace::{self, TraceLayer};
 
-use crate::routes::{completions::completions, models::get_models};
+use crate::routes::{
+    completions::{completions, completions_stream},
+    models::get_models,
+};
 pub mod infer;
 pub mod routes;
 
@@ -21,39 +25,13 @@ pub struct ModelList {
     pub models: [String; N_SUPPORTED_MODELS],
 }
 
-fn run_inference(model: Arc<dyn Model>) -> Result<InferenceStats, InferenceError> {
-    let mut session = model.start_session(Default::default());
-    let prompt = "Rust is a cool programming language because";
-
-    session.infer::<Infallible>(
-        &*model,
-        &mut rand::thread_rng(),
-        &llm::InferenceRequest {
-            prompt: prompt.into(),
-            parameters: &llm::InferenceParameters::default(),
-            play_back_previous_tokens: false,
-            maximum_token_count: None,
-        },
-        // OutputRequest
-        &mut Default::default(),
-        |r| match r {
-            llm::InferenceResponse::PromptToken(t) | llm::InferenceResponse::InferredToken(t) => {
-                print!("{t}");
-                std::io::stdout().flush().unwrap();
-
-                Ok(llm::InferenceFeedback::Continue)
-            }
-            _ => Ok(llm::InferenceFeedback::Continue),
-        },
-    )
-}
-
 pub async fn run_webserver(
     model_architecture: llm::ModelArchitecture,
     model_path: PathBuf,
     tokenizer_source: TokenizerSource,
     model_params: ModelParameters,
 ) {
+    tracing_subscriber::fmt().init();
     let now = std::time::Instant::now();
 
     let model: Arc<dyn Model> = Arc::from(
@@ -69,11 +47,10 @@ pub async fn run_webserver(
         }),
     );
 
-    println!(
+    tracing::info!(
         "Llama2 - fully loaded in: {}ms !",
         now.elapsed().as_millis()
     );
-    // dbg!(run_inference(model.clone()));
 
     let model_list = ModelList {
         models: ["llama-2".into()],
@@ -82,9 +59,18 @@ pub async fn run_webserver(
     let app = Router::new()
         .route("/v1/models", get(get_models))
         .with_state(model_list)
-        .route("/v1/completions", post(completions))
-        .layer(Extension(model));
+        .route("/v1/completions_full", post(completions))
+        .route("/v1/completions", post(completions_stream))
+        .with_state(model)
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(trace::DefaultMakeSpan::new().level(tracing::Level::INFO))
+                .on_response(trace::DefaultOnResponse::new().level(tracing::Level::INFO))
+                .on_request(trace::DefaultOnRequest::new().level(tracing::Level::INFO)),
+        );
 
+    // TODO : add port to clap
+    tracing::info!("listening on :3000");
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
         .serve(app.into_make_service())
         .await
