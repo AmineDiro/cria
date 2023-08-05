@@ -146,11 +146,13 @@ The only thing left to do is to change `Cargo.toml` file to
 - [x] Implement streaming completions SSE
 - [x] Cleanup cargo features with llm
 - [x] Support MacOS Metal
-- [ ] Merge completions / completion_streaming routes in same endpoint
+- [x] Merge completions / completion_streaming routes in same endpoint
+- [ ] Setup good tracing
 - [ ] Implement `/embeddings` route
-- [ ] Implement route `chat/completions`
+- [ ] Implement route `/chat/completions`
 - [ ] Implement streaming chat completions SSE
 - [ ] GPU use should be optional ?
+- [ ] Metrics ??
 - [ ] Batching requests(ala iouring):
   - For each response put an entry in a ringbuffer queue with : Entry(Flume mpsc (resp_rx,resp_tx))
   - Spawn a model in separate task reading from ringbuffer, get entry and put each token in response
