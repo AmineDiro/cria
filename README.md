@@ -9,22 +9,27 @@ The llama2 model **runs on GPU** using `ggml-sys` crate with specific compilatio
 
 ```bash
 git clone git@github.com:AmineDiro/cria.git
+cd cria/
+git submodule update --init --recursive
 ```
 
-2. Build project ( I ❤️ cargo !)
+2. Build project ( I ❤️ cargo !).
 
-```bash
-cargo b --release
-```
-
-> NOTE: If you have issues building for GPU.
+   - For `cuBLAS` (nvidia GPU ) acceleratin use
+     ```bash
+     cargo b --release --features cublas
+     ```
+   - For `metal` acceleration use
+     ```bash
+     cargo b --release --features metal
+     ```
+     > ❗ NOTE: If you have issues building for GPU, checkout the building issues section
 
 3. Download GGML `.bin` LLama-2 quantized model (for example [llama-2-7b](https://huggingface.co/TheBloke/Llama-2-7B-GGML/tree/main))
-4. Run API
-
-```bash
-./target/cria llama-2 {MODEL_BIN_PATH} --use-gpu --gpu-layers 32
-```
+4. Run API, use the `use-gpu` flag to offload model layers to your GPU
+   ```bash
+   ./target/cria llama-2 {MODEL_BIN_PATH} --use-gpu --gpu-layers 32
+   ```
 
 # Completion Example
 
