@@ -1,6 +1,7 @@
 use async_stream::stream;
 use axum::extract::State;
 use axum::response::sse::{KeepAlive, Sse};
+use axum::response::{IntoResponse, Response};
 use axum::{response::sse::Event, Json};
 use futures::Stream;
 use llm::TokenUtf8Buffer;
@@ -11,7 +12,26 @@ use uuid::Uuid;
 
 use crate::*;
 
-pub async fn completions_stream(
+/// Basically switches between completions and completions_stream methods
+/// depending on request `stream` value
+pub(crate) async fn compat_completions(
+    model: State<Arc<dyn Model>>,
+    request: Json<CompletionRequest>,
+) -> Response {
+    tracing::debug!(
+        "Received request with streaming set to: {}",
+        &request.stream
+    );
+    if !request.stream {
+        completions(model.clone(), request).await.into_response()
+    } else {
+        completions_stream(model.clone(), request)
+            .await
+            .into_response()
+    }
+}
+
+pub(crate) async fn completions_stream(
     State(model): State<Arc<dyn Model>>,
     Json(request): Json<CompletionRequest>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
@@ -91,7 +111,7 @@ pub async fn completions_stream(
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
-pub async fn completions(
+pub(crate) async fn completions(
     State(model): State<Arc<dyn Model>>,
     Json(request): Json<CompletionRequest>,
 ) -> Json<CompletionResponse> {

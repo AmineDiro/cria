@@ -12,7 +12,7 @@ use std::{fmt, sync::Arc};
 use tower_http::trace::{self, TraceLayer};
 
 use crate::routes::{
-    completions::{completions, completions_stream},
+    completions::{compat_completions, completions, completions_stream},
     models::get_models,
 };
 pub mod routes;
@@ -58,8 +58,9 @@ pub async fn run_webserver(
     let app = Router::new()
         .route("/v1/models", get(get_models))
         .with_state(model_list)
+        .route("/v1/completions", post(compat_completions))
         .route("/v1/completions_full", post(completions))
-        .route("/v1/completions", post(completions_stream))
+        .route("/v1/completions_stream", post(completions_stream))
         .with_state(model)
         .layer(
             TraceLayer::new_for_http()

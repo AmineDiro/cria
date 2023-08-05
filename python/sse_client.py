@@ -19,8 +19,10 @@ response = http.request(
     },
     body=json.dumps(
         {
-            "prompt": "Morocco won the world cup.",
-            "temperature": 0.01,
+            "prompt": "Morocco is a beautiful country",
+            "temperature": 0.8,
+            "max_tokens": 100,
+            "stream": True,
         }
     ),
 )
