@@ -10,7 +10,7 @@ async-stream = "0.3.5"
 axum = "0.6.19"
 clap = { version = "4.3.19", features = ["derive"] }
 futures = "0.3.28"
-llm = { path = "/home/amine/Documents/coding/llm/crates/llm" , features=["cublas"]}
+llm = { path = "./llm/crates/llm" }
 llm-llama = "0.1.1"
 rand = "0.8.5"
 serde = { version = "1.0.179", features = ["derive"] }
@@ -23,3 +23,8 @@ uuid = { version = "1.4.1", features = ["v4"] }
 
 [profile.dev.package.ggml-sys]
 opt-level = 3
+
+[features]
+cublas = ["llm/cublas"]
+metal = ["llm/metal"]
+

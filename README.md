@@ -19,7 +19,7 @@ cargo b --release
 
 > NOTE: If you have issues building for GPU.
 
-3. Download GGML `.bin` LLama-2 quantized model (for example [llama-2-7b](https://huggingface.co/meta-llama/Llama-2-7b))
+3. Download GGML `.bin` LLama-2 quantized model (for example [llama-2-7b](https://huggingface.co/TheBloke/Llama-2-7B-GGML/tree/main))
 4. Run API
 
 ```bash
