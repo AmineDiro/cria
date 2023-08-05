@@ -144,7 +144,8 @@ The only thing left to do is to change `Cargo.toml` file to
 - [x] Implement `/models` route
 - [x] Implement basic `/completions` route
 - [x] Implement streaming completions SSE
-- [ ] Cleanup cargo features with llm
+- [x] Cleanup cargo features with llm
+- [x] Support MacOS Metal
 - [ ] Merge completions / completion_streaming routes in same endpoint
 - [ ] Implement `/embeddings` route
 - [ ] Implement route `chat/completions`
