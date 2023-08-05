@@ -7,15 +7,19 @@ The llama2 model **runs on GPU** using `ggml-sys` crate with specific compilatio
 
 1. Git clone project
 
-```bash
-git clone git@github.com:AmineDiro/cria.git
-cd cria/
-git submodule update --init --recursive
-```
+   ```bash
+   git clone git@github.com:AmineDiro/cria.git
+   cd cria/
+   git submodule update --init --recursive
+   ```
 
 2. Build project ( I ❤️ cargo !).
 
-   - For `cuBLAS` (nvidia GPU ) acceleratin use
+   ```bash
+   cargo b --release
+   ```
+
+   - For `cuBLAS` (nvidia GPU ) acceleration use
      ```bash
      cargo b --release --features cublas
      ```
