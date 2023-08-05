@@ -119,8 +119,6 @@ index 3a6e841..ef1e1b0 100644
              .arg("static")
 -            .arg("--generate-code=arch=compute_52,code=[compute_52,sm_52]")
 -            .arg("--generate-code=arch=compute_61,code=[compute_61,sm_61]")
-+            //.arg("--generate-code=arch=compute_52,code=[compute_52,sm_52]")
-+            //.arg("--generate-code=arch=compute_61,code=[compute_61,sm_61]")
 +            .arg("--generate-code=arch=compute_75,code=[compute_75,sm_75]")
              .arg("-D_WINDOWS")
              .arg("-DNDEBUG")
