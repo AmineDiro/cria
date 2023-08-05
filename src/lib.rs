@@ -15,7 +15,6 @@ use crate::routes::{
     completions::{completions, completions_stream},
     models::get_models,
 };
-pub mod infer;
 pub mod routes;
 
 pub const N_SUPPORTED_MODELS: usize = 1;
