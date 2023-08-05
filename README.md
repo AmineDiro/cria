@@ -90,7 +90,7 @@ You can clearly see generation using my M1 GPU:
 <img src="contents/../content/generation.gif" width=1000px height=auto />
 </p>
 
-Here is the llama-2 response:
+<!-- Here is the llama-2 response:
 
 ```ipython
 In [8]: %run test_sse.py
@@ -102,7 +102,7 @@ If you want to visit Morocco, I recommend you to go during spring or autumn beca
 I hope you enjoy your stay in this beautiful country!
 
 Generation from completion took 2.25 !
-```
+``` -->
 
 ## Building with GPU issues
 
