@@ -37,7 +37,10 @@ The llama2 model **runs on GPU** using `ggml-sys` crate with specific compilatio
 
 # Completion Example
 
-You can use `openai` python client or directly use the `sseclient` python library and stream messages. Here is an example :
+You can use `openai` python client or directly use the `sseclient` python library and stream messages.
+Here is an example :
+
+<details><summary>Here is a example using a Python client</summary>
 
 ```python
 import json
@@ -78,6 +81,14 @@ e = time.perf_counter()
 print(f"\nGeneration from completion took {e-s:.2f} !")
 
 ```
+
+</details>
+
+You can clearly see generation using my M1 GPU:
+
+<p align="center">
+<img src="contents/../content/generation.gif" width=1000px height=auto />
+</p>
 
 Here is the llama-2 response:
 
