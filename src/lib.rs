@@ -13,6 +13,7 @@ use tower_http::trace::{self, TraceLayer};
 
 use crate::routes::{
     completions::{compat_completions, completions, completions_stream},
+    embeddings::embeddings,
     models::get_models,
 };
 pub mod routes;
@@ -59,6 +60,7 @@ pub async fn run_webserver(
         .route("/v1/models", get(get_models))
         .with_state(model_list)
         .route("/v1/completions", post(compat_completions))
+        .route("/v1/embeddings", post(embeddings))
         .route("/v1/completions_full", post(completions))
         .route("/v1/completions_stream", post(completions_stream))
         .with_state(model)

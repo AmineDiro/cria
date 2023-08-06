@@ -3,11 +3,7 @@ use axum::{extract::State, Json};
 use crate::*;
 use llm;
 
-fn get_embeddings(
-    model: &dyn llm::Model,
-    inference_parameters: &llm::InferenceParameters,
-    query: &str,
-) -> (usize, Vec<f32>) {
+fn get_embeddings(model: &dyn llm::Model, query: &str) -> (usize, Vec<f32>) {
     let mut session = model.start_session(Default::default());
     let mut output_request = llm::OutputRequest {
         all_logits: None,
@@ -26,22 +22,27 @@ fn get_embeddings(
     (query_token_ids.len(), output_request.embeddings.unwrap())
 }
 
-pub(crate) async fn embeddings<T: Serialize>(
+pub(crate) async fn embeddings(
     State(model): State<Arc<dyn Model>>,
     Json(request): Json<EmbeddingRequest>,
-) -> Json<EmbeddingResponse<T>> {
-    let inference_parameters = llm::InferenceParameters::default();
+) -> Json<EmbeddingResponse> {
+    // let input = request.input.into_iter().collect::<String>();
 
-    let input = request.input.into_iter().collect::<String>();
-    let (ntokens, embd) = get_embeddings(&*model, &inference_parameters, &input);
+    let mut data = Vec::new();
+    let mut ntokens = 0;
+    for input in request.input {
+        let (ntokens_input, embd) = get_embeddings(&*model, &input);
+        ntokens += ntokens_input;
+        data.push(EmbeddingData {
+            object: "embedding".to_string(),
+            index: 0,
+            embedding: embd,
+        })
+    }
     Json(EmbeddingResponse {
         object: "list".to_string(),
         model: "llama-2".to_string(),
-        data: EmbeddingData {
-            object: "embedding".to_string(),
-            index: 0,
-            embedding: embd.into_iter().map(|e| T::from(e)).collect(),
-        },
+        data: data,
         usage: Usage {
             prompt_tokens: ntokens,
             total_tokens: ntokens,
@@ -49,6 +50,7 @@ pub(crate) async fn embeddings<T: Serialize>(
     })
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct EmbeddingRequest {
     model: Option<String>,
@@ -58,16 +60,16 @@ pub struct EmbeddingRequest {
 }
 
 #[derive(Serialize, Debug)]
-struct EmbeddingData<T: Serialize> {
+struct EmbeddingData {
     object: String,
     index: usize,
-    embedding: Vec<T>,
+    embedding: Vec<f32>,
 }
 #[derive(Serialize, Debug)]
-pub struct EmbeddingResponse<T: Serialize> {
+pub struct EmbeddingResponse {
     object: String,
     model: String,
-    data: EmbeddingData<T>,
+    data: Vec<EmbeddingData>,
     usage: Usage,
 }
 
