@@ -149,6 +149,7 @@ The only thing left to do is to change `Cargo.toml` file to
 - [x] Merge completions / completion_streaming routes in same endpoint
 - [x] Implement `/embeddings` route
 - [ ] Setup good tracing
+- [ ] Better errors
 - [ ] Implement route `/chat/completions`
 - [ ] Implement streaming chat completions SSE
 - [ ] Metrics ??
