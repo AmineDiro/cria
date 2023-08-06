@@ -1,4 +1,4 @@
-# Cria is a herd of Llamas
+# Cria - Local llama OpenAI-compatible API 
 
 The objective is to serve a local `llama-2` model by mimicking an OpenAI API service.
 The llama2 model **runs on GPU** using `ggml-sys` crate with specific compilation flags.
