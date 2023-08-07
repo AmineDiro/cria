@@ -42,7 +42,7 @@ pub(crate) async fn embeddings(
     Json(EmbeddingResponse {
         object: "list".to_string(),
         model: "llama-2".to_string(),
-        data: data,
+        data,
         usage: Usage {
             prompt_tokens: ntokens,
             total_tokens: ntokens,
