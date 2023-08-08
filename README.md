@@ -1,4 +1,4 @@
-# Cria is a herd of Llamas
+# Cria - Local llama OpenAI-compatible API 
 
 The objective is to serve a local `llama-2` model by mimicking an OpenAI API service.
 The llama2 model **runs on GPU** using `ggml-sys` crate with specific compilation flags.
@@ -147,11 +147,11 @@ The only thing left to do is to change `Cargo.toml` file to
 - [x] Cleanup cargo features with llm
 - [x] Support MacOS Metal
 - [x] Merge completions / completion_streaming routes in same endpoint
+- [x] Implement `/embeddings` route
 - [ ] Setup good tracing
-- [ ] Implement `/embeddings` route
+- [ ] Better errors
 - [ ] Implement route `/chat/completions`
 - [ ] Implement streaming chat completions SSE
-- [ ] GPU use should be optional ?
 - [ ] Metrics ??
 - [ ] Batching requests(ala iouring):
   - For each response put an entry in a ringbuffer queue with : Entry(Flume mpsc (resp_rx,resp_tx))
