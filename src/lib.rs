@@ -11,7 +11,11 @@ use std::{convert::Infallible, path::PathBuf};
 use std::{fmt, sync::Arc};
 use tower_http::trace::{self, TraceLayer};
 
+pub mod defaults;
+use defaults::*;
+
 use crate::routes::{
+    chat::chat_completion,
     completions::{compat_completions, completions, completions_stream},
     embeddings::embeddings,
     models::get_models,
@@ -59,6 +63,7 @@ pub async fn run_webserver(
     let app = Router::new()
         .route("/v1/models", get(get_models))
         .with_state(model_list)
+        .route("/v1/chat/completions", post(chat_completion))
         .route("/v1/completions", post(compat_completions))
         .route("/v1/embeddings", post(embeddings))
         .route("/v1/completions_full", post(completions))

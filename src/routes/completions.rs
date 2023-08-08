@@ -158,7 +158,7 @@ pub(crate) async fn completions(
             logprobs: None,
             finish_reason: Some(FinishReason::Length), // TODO: stop or length
         }],
-        usage: Some(CompletionResponseUsage {
+        usage: Some(Usage {
             prompt_tokens: stats.prompt_tokens,
             completion_tokens: stats.predict_tokens,
             total_tokens: stats.prompt_tokens + stats.predict_tokens,
@@ -166,7 +166,7 @@ pub(crate) async fn completions(
     })
 }
 #[derive(Deserialize, Debug)]
-enum LogitBias {
+pub enum LogitBias {
     TokenIds,
     Tokens,
 }
@@ -216,53 +216,17 @@ pub struct CompletionRequest {
     best_of: Option<usize>, // 1
     user: Option<String>,
 }
-fn default_max_tokens() -> usize {
-    256
-}
-fn default_temperature() -> f32 {
-    0.8
-}
-fn default_top_p() -> f32 {
-    0.95
-}
-fn default_stream() -> bool {
-    false
-}
-fn default_echo() -> bool {
-    false
-}
-fn default_top_k() -> usize {
-    40
-}
-fn default_repeat_penalty() -> f32 {
-    1.1
-}
-fn default_presence_penalty() -> f32 {
-    0.0
-}
-fn default_frequence_penalty() -> f32 {
-    0.0
-}
-fn default_microstat_mode() -> usize {
-    0
-}
-fn default_microstat_tau() -> f32 {
-    5.0
-}
-fn default_microstat_eta() -> f32 {
-    0.1
-}
 
 #[derive(Serialize, Debug)]
-enum FinishReason {
+pub enum FinishReason {
     Stop,
     Length,
 }
 #[derive(Serialize, Debug, Default)]
-struct CompletionResponseUsage {
-    prompt_tokens: usize,
-    completion_tokens: usize,
-    total_tokens: usize,
+pub struct Usage {
+    pub prompt_tokens: usize,
+    pub completion_tokens: usize,
+    pub total_tokens: usize,
 }
 #[derive(Serialize, Debug)]
 struct CompletionResponseChoices {
@@ -279,20 +243,5 @@ pub struct CompletionResponse {
     object: String,
     model: String,
     choices: Vec<CompletionResponseChoices>,
-    usage: Option<CompletionResponseUsage>,
+    usage: Option<Usage>,
 }
-// {
-//   "choices": [
-//     {
-//       "delta": {
-//         "role": "assistant"
-//       },
-//       "finish_reason": null,
-//       "index": 0
-//     }
-//   ],
-//   "created": 1677825464,
-//   "id": "chatcmpl-6ptKyqKOGXZT6iQnqiXAH8adNLUzD",
-//   "model": "gpt-3.5-turbo-0301",
-//   "object": "chat.completion.chunk"
-// }
