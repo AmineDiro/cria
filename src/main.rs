@@ -17,7 +17,7 @@ async fn main() {
 
     // hierarchical config. cli args override Env vars
     let config: Config = Figment::new()
-        .merge(Env::prefixed("APP_"))
+        .merge(Env::prefixed("CRIA_"))
         .merge(Serialized::defaults(Args::parse()))
         .extract()
         .unwrap();

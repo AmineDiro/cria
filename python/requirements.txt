@@ -1,5 +1,6 @@
 openai
 sseclient-py
 urllib3
+langchain
 #dev
 ipython

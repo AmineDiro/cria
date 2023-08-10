@@ -32,8 +32,51 @@ The llama2 model **runs on GPU** using `ggml-sys` crate with specific compilatio
 3. Download GGML `.bin` LLama-2 quantized model (for example [llama-2-7b](https://huggingface.co/TheBloke/Llama-2-7B-GGML/tree/main))
 4. Run API, use the `use-gpu` flag to offload model layers to your GPU
    ```bash
-   ./target/cria llama-2 {MODEL_BIN_PATH} --use-gpu --gpu-layers 32
+   ./target/cria -a llama --model {MODEL_BIN_PATH} --use-gpu --gpu-layers 32
    ```
+## Command line arguments reference
+All the parameters can be passed as environment variables or command line arguments. Here is the reference for the command line arguments:
+
+```bash
+./target/cria --help
+
+Usage: cria [OPTIONS]
+
+Options:
+  -a, --model-architecture <MODEL_ARCHITECTURE>      [default: llama]
+      --model <MODEL_PATH>                           
+  -v, --tokenizer-path <TOKENIZER_PATH>              
+  -r, --tokenizer-repository <TOKENIZER_REPOSITORY>  
+  -H, --host <HOST>                                  [default: 0.0.0.0]
+  -p, --port <PORT>                                  [default: 3000]
+  -m, --prefer-mmap                                  
+  -c, --context-size <CONTEXT_SIZE>                  [default: 2048]
+  -l, --lora-adapters <LORA_ADAPTERS>                
+  -u, --use-gpu                                      
+  -g, --gpu-layers <GPU_LAYERS>                      
+  -z, --zipkin-endpoint <ZIPKIN_ENDPOINT>            
+  -h, --help                                         Print help
+```
+
+For environment variables, just prefix the argument with `CRIA_` and use uppercase letters. For example, to set the model path, you can use `CRIA_MODEL` environment variable.
+
+There is a an example .env.sample file in the project root directory.
+
+# Prometheus Metrics
+
+We are exporting Prometheus metrics via the `/metrics` endpoint. 
+
+# Tracing
+We are tracing performance metrics using `tracing` and `tracing-opentelemetry` crates.
+
+You can use the `--zipkin-endpoint` to export metrics to a zipkin endpoint.
+
+There is a docker-compose file in the project root directory to run a local zipkin server on port `9411`.
+
+<div align="center">
+<img src="./zipkin_screenshot.png"  alt="screenshot"/>
+</div>
+
 
 # Completion Example
 
@@ -150,9 +193,9 @@ The only thing left to do is to change `Cargo.toml` file to
 - [x] Implement `/embeddings` route
 - [x] Implement route `/chat/completions`
 - [ ] Better errors
-- [ ] Setup good tracing
+- [X] Setup good tracing
 - [ ] Implement streaming chat completions SSE
-- [ ] Metrics ??
+- [X] Metrics ??
 - [ ] Batching requests(ala iouring):
   - For each response put an entry in a ringbuffer queue with : Entry(Flume mpsc (resp_rx,resp_tx))
   - Spawn a model in separate task reading from ringbuffer, get entry and put each token in response
