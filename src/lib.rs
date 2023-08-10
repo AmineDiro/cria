@@ -2,18 +2,19 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use llm::{Model, ModelParameters, TokenizerSource};
+use llm::Model;
 use serde::de;
 use serde::Serialize;
 use serde::{Deserialize, Deserializer};
 use std::marker::PhantomData;
-use std::{convert::Infallible, path::PathBuf};
+use std::convert::Infallible;
 use std::{fmt, sync::Arc};
 use tower_http::trace::{self, TraceLayer};
 use axum_prometheus::PrometheusMetricLayer;
-
 pub mod defaults;
 use defaults::*;
+pub mod config;
+use config::Config;
 
 use crate::routes::{
     chat::chat_completion,
@@ -31,13 +32,15 @@ pub struct ModelList {
 }
 
 pub async fn run_webserver(
-    model_architecture: llm::ModelArchitecture,
-    model_path: PathBuf,
-    tokenizer_source: TokenizerSource,
-    model_params: ModelParameters,
-    host: String,
-    port: usize
+    config: Config,
+    // host: String,
+    // port: usize
 ) {
+    let model_architecture=config.model_architecture;
+    let model_path=config.model_path.clone();
+    let tokenizer_source=config.to_tokenizer_source();
+    let model_params=config.extract_model_params();
+
     tracing_subscriber::fmt().init();
     // we init prometheus metrics
     let (prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
@@ -83,6 +86,9 @@ pub async fn run_webserver(
                 .on_response(trace::DefaultOnResponse::new().level(tracing::Level::INFO))
                 .on_request(trace::DefaultOnRequest::new().level(tracing::Level::INFO)),
         );
+
+    let host=config.host;
+    let port=config.port;
 
     tracing::info!("listening on {host}:{port}");
     axum::Server::bind(&format!("{host}:{port}").as_str().parse().unwrap())

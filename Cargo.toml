@@ -32,6 +32,7 @@ opentelemetry-zipkin = { version = "0.18.0", features = [
 ], default-features = false }
 axum-tracing-opentelemetry = "0.13.1"
 axum-prometheus = "0.4.0"
+figment = { version = "0.10.10", features = ["env"] }
 
 [profile.dev.package.ggml-sys]
 opt-level = 3
