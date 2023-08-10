@@ -1,3 +1,4 @@
+// llm defaults
 pub fn default_max_tokens() -> usize {
     256
 }

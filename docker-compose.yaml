@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  zipkin-server:
+    container_name: sirdai-zipkin-server
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411"
+
