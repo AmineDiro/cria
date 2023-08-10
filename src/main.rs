@@ -1,10 +1,7 @@
 use clap::Parser;
 use cria::run_webserver;
 use figment::{
-    providers::{
-        Env,
-        Serialized,
-    },
+    providers::{Env, Serialized},
     Figment,
 };
 pub mod cli;
@@ -16,14 +13,12 @@ use cria::config::Config;
 async fn main() {
     let args = Args::parse();
 
-    // hierarchical config. cli args override Env vars 
+    // hierarchical config. cli args override Env vars
     let config: Config = Figment::new()
         .merge(Env::prefixed("APP_"))
         .merge(Serialized::defaults(args))
-        .extract().unwrap();
+        .extract()
+        .unwrap();
 
-    run_webserver(
-        config
-    )
-    .await;
+    run_webserver(config).await;
 }

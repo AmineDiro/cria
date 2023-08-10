@@ -1,4 +1,3 @@
-
 // llm defaults
 pub fn default_max_tokens() -> usize {
     256
@@ -36,5 +35,3 @@ pub fn default_microstat_eta() -> f32 {
 pub fn default_echo() -> bool {
     false
 }
-
-

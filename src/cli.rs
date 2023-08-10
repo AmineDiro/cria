@@ -1,6 +1,6 @@
 use clap::Parser;
-use std::path::PathBuf;
 use serde::Serialize;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug, Serialize)]
 pub struct Args {

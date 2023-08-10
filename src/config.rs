@@ -1,39 +1,39 @@
-use std::path::PathBuf;
 use llm;
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-};
+use serde::{Deserialize, Deserializer, Serialize};
+use std::path::PathBuf;
 
 /// The global configuration for cria components.
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    #[serde(deserialize_with = "model_architecture_deserialize", default= "default_model_architecture")]
+    #[serde(
+        deserialize_with = "model_architecture_deserialize",
+        default = "default_model_architecture"
+    )]
     pub model_architecture: llm::ModelArchitecture,
     pub model_path: PathBuf,
     #[serde(default)]
     pub tokenizer_path: Option<PathBuf>,
     #[serde(default)]
     pub tokenizer_repository: Option<String>,
-    #[serde(default= "default_host")]
+    #[serde(default = "default_host")]
     pub host: String,
-    #[serde(default= "default_port")]
+    #[serde(default = "default_port")]
     pub port: usize,
-    #[serde(default= "default_prefer_mmap")]
+    #[serde(default = "default_prefer_mmap")]
     pub prefer_mmap: bool,
-    #[serde(default= "default_context_size")]
+    #[serde(default = "default_context_size")]
     pub context_size: usize,
     #[serde(default)]
     pub lora_adapters: Option<Vec<PathBuf>>,
-    #[serde(default= "default_use_gpu")]
+    #[serde(default = "default_use_gpu")]
     pub use_gpu: bool,
     #[serde(default)]
     pub gpu_layers: Option<usize>,
-
 }
 
-fn model_architecture_deserialize<'de, D>(deserializer: D) -> Result<llm::ModelArchitecture, D::Error>
+fn model_architecture_deserialize<'de, D>(
+    deserializer: D,
+) -> Result<llm::ModelArchitecture, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -41,16 +41,14 @@ where
     if maybe_model_architecture.is_none() {
         return Ok(llm::ModelArchitecture::Llama);
     }
-    Ok(
-        match maybe_model_architecture.unwrap() {
-            case if case.eq_ignore_ascii_case("llama") => llm::ModelArchitecture::Llama,
-            case if case.eq_ignore_ascii_case("gpt2") => llm::ModelArchitecture::Gpt2,
-            case if case.eq_ignore_ascii_case("gptj") => llm::ModelArchitecture::GptJ,
-            case if case.eq_ignore_ascii_case("gpt-neo-x") => llm::ModelArchitecture::GptNeoX,
-            case if case.eq_ignore_ascii_case("mpt") => llm::ModelArchitecture::Mpt,
-            case  => panic!("Unknown model architecture: {}", case)
-        }
-    )
+    Ok(match maybe_model_architecture.unwrap() {
+        case if case.eq_ignore_ascii_case("llama") => llm::ModelArchitecture::Llama,
+        case if case.eq_ignore_ascii_case("gpt2") => llm::ModelArchitecture::Gpt2,
+        case if case.eq_ignore_ascii_case("gptj") => llm::ModelArchitecture::GptJ,
+        case if case.eq_ignore_ascii_case("gpt-neo-x") => llm::ModelArchitecture::GptNeoX,
+        case if case.eq_ignore_ascii_case("mpt") => llm::ModelArchitecture::Mpt,
+        case => panic!("Unknown model architecture: {}", case),
+    })
 }
 
 impl Config {
