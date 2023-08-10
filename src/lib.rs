@@ -3,6 +3,7 @@ use axum::{
     Router,
 };
 use axum_prometheus::PrometheusMetricLayer;
+use axum_tracing_opentelemetry::middleware::OtelAxumLayer;
 use llm::Model;
 use serde::de;
 use serde::Serialize;
@@ -10,7 +11,6 @@ use serde::{Deserialize, Deserializer};
 use std::convert::Infallible;
 use std::marker::PhantomData;
 use std::{fmt, sync::Arc};
-use tower_http::trace::{self, TraceLayer};
 pub mod defaults;
 use defaults::*;
 pub mod config;
@@ -31,17 +31,12 @@ pub struct ModelList {
     pub models: [String; N_SUPPORTED_MODELS],
 }
 
-pub async fn run_webserver(
-    config: Config,
-    // host: String,
-    // port: usize
-) {
+pub async fn run_webserver(config: Config) {
     let model_architecture = config.model_architecture;
     let model_path = config.model_path.clone();
     let tokenizer_source = config.to_tokenizer_source();
     let model_params = config.extract_model_params();
 
-    tracing_subscriber::fmt().init();
     // we init prometheus metrics
     let (prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
 
@@ -61,7 +56,9 @@ pub async fn run_webserver(
     );
 
     tracing::info!(
-        "Llama2 - fully loaded in: {}ms !",
+        "{} - {} - fully loaded in: {}ms !",
+        model_architecture,
+        model_path.to_string_lossy(),
         now.elapsed().as_millis()
     );
 
@@ -80,12 +77,7 @@ pub async fn run_webserver(
         .route("/metrics", get(|| async move { metric_handle.render() }))
         .with_state(model)
         .layer(prometheus_layer)
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(trace::DefaultMakeSpan::new().level(tracing::Level::INFO))
-                .on_response(trace::DefaultOnResponse::new().level(tracing::Level::INFO))
-                .on_request(trace::DefaultOnRequest::new().level(tracing::Level::INFO)),
-        );
+        .layer(OtelAxumLayer::default());
 
     let host = config.host;
     let port = config.port;

@@ -3,3 +3,6 @@ python/venv/
 python/env/
 .venv
 Cargo.lock
+.vscode
+models
+.env

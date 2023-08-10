@@ -29,6 +29,10 @@ pub struct Config {
     pub use_gpu: bool,
     #[serde(default)]
     pub gpu_layers: Option<usize>,
+    #[serde(default = "default_service_name")]
+    pub service_name: String,
+    #[serde(default)]
+    pub zipkin_endpoint: Option<String>,
 }
 
 fn model_architecture_deserialize<'de, D>(
@@ -95,4 +99,8 @@ fn default_prefer_mmap() -> bool {
 
 fn default_model_architecture() -> llm::ModelArchitecture {
     llm::ModelArchitecture::Llama
+}
+
+fn default_service_name() -> String {
+    String::from("cria")
 }
