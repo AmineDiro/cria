@@ -12,6 +12,10 @@ struct Args {
     #[arg(long, short = 'r')]
     pub tokenizer_repository: Option<String>,
 
+    #[arg(long, short, default_value_t = String::from("0.0.0.0"))]
+    pub host: String,
+    #[arg(long, short, default_value_t = 3000)]
+    pub port: usize,
     #[arg(long, short, default_value_t = true)]
     pub prefer_mmap: bool,
     #[arg(long, short, default_value_t = 2048)]
@@ -55,6 +59,8 @@ async fn main() {
     let Args {
         model_architecture,
         model_path,
+        host,
+        port,
         ..
     } = args;
 
@@ -63,6 +69,8 @@ async fn main() {
         model_path,
         tokenizer_source,
         model_params,
+        host,
+        port
     )
     .await;
 }

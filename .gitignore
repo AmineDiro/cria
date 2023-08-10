@@ -1,3 +1,5 @@
 /target
 python/venv/
 python/env/
+.venv
+Cargo.lock

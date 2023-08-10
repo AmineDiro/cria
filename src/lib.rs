@@ -10,6 +10,7 @@ use std::marker::PhantomData;
 use std::{convert::Infallible, path::PathBuf};
 use std::{fmt, sync::Arc};
 use tower_http::trace::{self, TraceLayer};
+use axum_prometheus::PrometheusMetricLayer;
 
 pub mod defaults;
 use defaults::*;
@@ -34,8 +35,13 @@ pub async fn run_webserver(
     model_path: PathBuf,
     tokenizer_source: TokenizerSource,
     model_params: ModelParameters,
+    host: String,
+    port: usize
 ) {
     tracing_subscriber::fmt().init();
+    // we init prometheus metrics
+    let (prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
+
     let now = std::time::Instant::now();
 
     let model: Arc<dyn Model> = Arc::from(
@@ -68,7 +74,9 @@ pub async fn run_webserver(
         .route("/v1/embeddings", post(embeddings))
         .route("/v1/completions_full", post(completions))
         .route("/v1/completions_stream", post(completions_stream))
+        .route("/metrics", get(|| async move { metric_handle.render() }))
         .with_state(model)
+        .layer(prometheus_layer)
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().level(tracing::Level::INFO))
@@ -76,9 +84,8 @@ pub async fn run_webserver(
                 .on_request(trace::DefaultOnRequest::new().level(tracing::Level::INFO)),
         );
 
-    // TODO : add port to clap
-    tracing::info!("listening on :3000");
-    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
+    tracing::info!("listening on {host}:{port}");
+    axum::Server::bind(&format!("{host}:{port}").as_str().parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();

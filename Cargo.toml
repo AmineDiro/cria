@@ -17,9 +17,21 @@ serde = { version = "1.0.179", features = ["derive"] }
 tokio = { version = "1.29.1", features = ["full"] }
 tokio-stream = "0.1.14"
 tower-http = { version = "0.4.0", features = ["trace"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 uuid = { version = "1.4.1", features = ["v4"] }
+# tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+  "json",
+  "time",
+  "env-filter",
+]}
+opentelemetry = { version = "0.20.0", features = ["rt-tokio", "metrics"] }
+tracing-opentelemetry = "0.20.0"
+opentelemetry-zipkin = { version = "0.18.0", features = [
+  "reqwest-client",
+], default-features = false }
+axum-tracing-opentelemetry = "0.13.1"
+axum-prometheus = "0.4.0"
 
 [profile.dev.package.ggml-sys]
 opt-level = 3
