@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tokenizers = "=0.13.3"
 async-stream = "0.3.5"
 axum = "0.6.19"
 clap = { version = "4.3.19", features = ["derive"] }
