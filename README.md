@@ -10,7 +10,6 @@ The llama2 model **runs on GPU** using `ggml-sys` crate with specific compilatio
    ```bash
    git clone git@github.com:AmineDiro/cria.git
    cd cria/
-   git submodule update --init --recursive
    ```
 
 2. Build project ( I ❤️ cargo !).
