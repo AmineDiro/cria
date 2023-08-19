@@ -55,6 +55,8 @@ Options:
   -l, --lora-adapters <LORA_ADAPTERS>
   -u, --use-gpu
   -g, --gpu-layers <GPU_LAYERS>
+  --n-gqa <N_GQA>
+      Grouped Query attention : Specify -gqa 8 for 70B models to work
   -z, --zipkin-endpoint <ZIPKIN_ENDPOINT>
   -h, --help                                         Print help
 ```
@@ -134,52 +136,7 @@ You can clearly see generation using my M1 GPU:
 <img src="contents/../content/generation.gif" width=1000px height=auto />
 </p>
 
-<!-- Here is the llama-2 response:
-
-```ipython
-In [8]: %run test_sse.py
-nobody knows how many people live there, but it's estimated that the population is around 3
-0 million.
-The Moroccans are very friendly and welcoming people. They love to meet foreigners and they will be happy if you speak their language (Arabic).
-Morocco is a Muslim country so don't expect to see any women wearing bikinis on the beach or at the pool. You can find some of them in Marrakech though!
-If you want to visit Morocco, I recommend you to go during spring or autumn because summer is too hot and winter is cold.
-I hope you enjoy your stay in this beautiful country!
-
-Generation from completion took 2.25 !
-``` -->
-
-## Building with GPU issues
-
-I had some issues compiling `llm` crate with `cuda` support for my RTX2070 Super (Turing architecture). After some debugging, I needed to provide nvcc with the correct gpu-architecture version, for now `ggml-sys` crates only supports. Here are the set of changes to the `build.rs` :
-
-```diff
-diff --git a/crates/ggml/sys/build.rs b/crates/ggml/sys/build.rs
-index 3a6e841..ef1e1b0 100644
---- a/crates/ggml/sys/build.rs
-+++ b/crates/ggml/sys/build.rs
-@@ -330,8 +330,9 @@ fn enable_cublas(build: &mut cc::Build, out_dir: &Path) {
-             .arg("--compile")
-             .arg("-cudart")
-             .arg("static")
--            .arg("--generate-code=arch=compute_52,code=[compute_52,sm_52]")
--            .arg("--generate-code=arch=compute_61,code=[compute_61,sm_61]")
-+            .arg("--generate-code=arch=compute_75,code=[compute_75,sm_75]")
-             .arg("-D_WINDOWS")
-             .arg("-DNDEBUG")
-             .arg("-DGGML_USE_CUBLAS")
-@@ -361,8 +362,7 @@ fn enable_cublas(build: &mut cc::Build, out_dir: &Path) {
-             .arg("-Illama-cpp/include/ggml")
-             .arg("-mtune=native")
-             .arg("-pthread")
--            .arg("--generate-code=arch=compute_52,code=[compute_52,sm_52]")
--            .arg("--generate-code=arch=compute_61,code=[compute_61,sm_61]")
-+            .arg("--generate-code=arch=compute_75,code=[compute_75,sm_75]")
-             .arg("-DGGML_USE_CUBLAS")
-             .arg("-I/usr/local/cuda/include")
-             .arg("-I/opt/cuda/include")
-```
-
-The only thing left to do is to change `Cargo.toml` file to
+```-->
 
 ## TODO/ Roadmap:
 
@@ -205,3 +162,4 @@ The only thing left to do is to change `Cargo.toml` file to
 ## Routes
 
 - Checkout : https://platform.openai.com/docs/api-reference/
+```

@@ -32,7 +32,8 @@ pub struct Args {
     #[arg(long, short)]
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub gpu_layers: Option<usize>,
-    #[arg(long, short)]
+    /// Grouped Query attention : Specify -gqa 8 for 70B models to work
+    #[arg(long)]
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub n_gqa: Option<usize>,
     #[arg(long, short)]
