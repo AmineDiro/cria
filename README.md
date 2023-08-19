@@ -3,7 +3,48 @@
 The objective is to serve a local `llama-2` model by mimicking an OpenAI API service.
 The llama2 model **runs on GPU** using `ggml-sys` crate with specific compilation flags.
 
-## Quickstart:
+## Get started:
+
+### Using Docker (recommended way)
+
+The easiest way of getting started is using the official Docker container. Make sure you have `docker` and `docker-compose` installed on your machine (example install for [ubuntu20.04](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04)).
+
+`cria` provides two docker images : one for CPU only deployments and a second GPU accelerated image. To use GPU image, you need to install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). We also recommend using NVIDIA drivers with CUDA version 11.7 or higher.
+
+To deploy the `cria` gpu version using `docker-compose`:
+
+1. Clone the repos:
+
+```bash
+git clone git@github.com:AmineDiro/cria.git
+cd cria/docker
+```
+
+2. The api will load the model located in `/app/model.bin` by default. You should change the docker-compose file with ggml model path for docker to bind mount. You can also change environement variables for your specific config. Alternatively, the easiest way is to set `CRIA_MODEL_PATH` in a`docker/.env` :
+
+```bash
+# .env
+CRIA_MODEL_PATH=/path/to/ggml/model
+
+# Other environement variables to set
+CRIA_SERVICE_NAME=cria
+CRIA_HOST=0.0.0.0
+CRIA_PORT=3000
+CRIA_MODEL_ARCHITECTURE=llama
+CRIA_USE_GPU=true
+CRIA_GPU_LAYERS=32
+CRIA_ZIPKIN_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+```
+
+3. Run `docker-compose` to startup the `cria` API server and the zipkin server
+
+```bash
+docker compose up -f docker-compose-gpu.yaml -d
+```
+
+4. Enjoy using your local LLM API server 🤟 !
+
+### Local Install
 
 1. Git clone project
 
@@ -63,7 +104,7 @@ Options:
 
 For environment variables, just prefix the argument with `CRIA_` and use uppercase letters. For example, to set the model path, you can use `CRIA_MODEL` environment variable.
 
-There is a an example .env.sample file in the project root directory.
+There is a an example `docker/.env.sample` file in the project root directory.
 
 # Prometheus Metrics
 
@@ -162,4 +203,8 @@ You can clearly see generation using my M1 GPU:
 ## Routes
 
 - Checkout : https://platform.openai.com/docs/api-reference/
+```
+
+```
+
 ```

@@ -2,21 +2,21 @@ version: "3.8"
 
 services:
   cria:
-    build: 
+    build:
       context: ../
       dockerfile: Dockerfile-gpu
     ports:
       - 3000:3000
     volumes:
-      # TODO : Specify you Llama model path here
-      - /media/amine/models/llama/llama-2-7b.ggmlv3.q4_0.bin:/app/model.bin
+      # Specify you Llama model path here
+      - ${CRIA_MODEL_PATH}:/app/model.bin
     environment:
-      - CRIA_SERVICE_NAME=cria
-      - CRIA_HOST=0.0.0.0
-      - CRIA_PORT=3000
-      - CRIA_USE_GPU=true
-      - CRIA_GPU_LAYERS=32
-      - CRIA_ZIPKIN_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+      - CRIA_SERVICE_NAME=${CRIA_SERVICE_NAME}
+      - CRIA_HOST=${CRIA_HOST}
+      - CRIA_PORT=${CRIA_PORT}
+      - CRIA_USE_GPU=${CRIA_USE_GPU}
+      - CRIA_GPU_LAYERS=${CRIA_GPU_LAYERS}
+      - CRIA_ZIPKIN_ENDPOINT=${CRIA_ZIPKIN_ENDPOINT}
     deploy:
       resources:
         reservations:
@@ -25,9 +25,8 @@ services:
               count: 1
               capabilities: [ gpu ]
 
-  zipkin-server:
-    container_name: sirdai-zipkin-server
+  zipkin:
+    container_name: zipkin-server
     image: openzipkin/zipkin
     ports:
       - "9411:9411"
-
