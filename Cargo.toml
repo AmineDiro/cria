@@ -10,7 +10,8 @@ async-stream = "0.3.5"
 axum = "0.6.19"
 clap = { version = "4.3.19", features = ["derive"] }
 futures = "0.3.28"
-llm = { path = "./llm/crates/llm" }
+# llm = { path = "./llm/crates/llm" }
+llm = { git = "https://github.com/rustformers/llm.git", rev = "2f6ffd4435799ceaa1d1bcb5a8790e5b3e0c5663" }
 llm-llama = "0.1.1"
 rand = "0.8.5"
 serde = { version = "1.0.179", features = ["derive"] }
@@ -24,7 +25,7 @@ tracing-subscriber = { version = "0.3", features = [
   "json",
   "time",
   "env-filter",
-]}
+] }
 opentelemetry = { version = "0.20.0", features = ["rt-tokio", "metrics"] }
 tracing-opentelemetry = "0.20.0"
 opentelemetry-zipkin = { version = "0.18.0", features = [
@@ -40,4 +41,3 @@ opt-level = 3
 [features]
 cublas = ["llm/cublas"]
 metal = ["llm/metal"]
-

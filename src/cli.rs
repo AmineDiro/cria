@@ -34,5 +34,8 @@ pub struct Args {
     pub gpu_layers: Option<usize>,
     #[arg(long, short)]
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub n_gqa: Option<usize>,
+    #[arg(long, short)]
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub zipkin_endpoint: Option<String>,
 }

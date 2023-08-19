@@ -1,9 +1,10 @@
 use axum::extract::State;
 use axum::Json;
-use llm::samplers::TopPTopK;
-use llm::{InferenceFeedback, InferenceResponse, Model, TokenBias};
+use llm::samplers::build_sampler;
+use llm::{InferenceFeedback, InferenceResponse, Model};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::vec;
 use std::{collections::HashMap, convert::Infallible};
 use uuid::Uuid;
 
@@ -73,6 +74,21 @@ pub(crate) async fn chat_completion(
 ) -> Json<ChatCompletionResponse> {
     let mut session: llm::InferenceSession = model.start_session(Default::default());
 
+    // TODO: deal with result  error
+    // Sampler are built using the following
+    //`sampler_name:key1=value1:key2=value2`.
+    let repetition_penalty_last_n = 512;
+    let sampler_args = vec![
+        format!("topk:k={}", request.top_k),
+        format!("topp:p={}", request.top_p),
+        format!(
+            "repetition:penalty={}:last_n={}",
+            request.repeat_penalty, repetition_penalty_last_n
+        ),
+        format!("temperature:temperature={}", request.temperature),
+    ];
+    let sampler = build_sampler(0, &[], &sampler_args).unwrap();
+
     let chat_history = get_chat_history(request.messages);
     tracing::debug!("Chat history : {}", &chat_history);
     let mut response_tokens: Vec<String> = Vec::new();
@@ -82,16 +98,7 @@ pub(crate) async fn chat_completion(
             &mut rand::thread_rng(),
             &llm::InferenceRequest {
                 prompt: llm::Prompt::Text(&chat_history),
-                parameters: &llm::InferenceParameters {
-                    sampler: Arc::new(TopPTopK {
-                        top_k: request.top_k,
-                        top_p: request.top_p,
-                        repeat_penalty: request.repeat_penalty,
-                        temperature: request.temperature,
-                        bias_tokens: TokenBias::empty(),
-                        repetition_penalty_last_n: 512, // TODO : where is this used in LLAMA ?
-                    }),
-                },
+                parameters: &llm::InferenceParameters { sampler: sampler },
                 play_back_previous_tokens: false,
                 maximum_token_count: Some(request.max_tokens),
             },

@@ -4,8 +4,9 @@ use axum::response::sse::{KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
 use axum::{response::sse::Event, Json};
 use futures::Stream;
+use llm::samplers::build_sampler;
 use llm::TokenUtf8Buffer;
-use llm::{feed_prompt_callback, samplers::TopPTopK, InferenceError, InferenceFeedback, TokenBias};
+use llm::{feed_prompt_callback, InferenceError, InferenceFeedback};
 use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
@@ -39,6 +40,17 @@ pub(crate) async fn completions_stream(
     let mut response_tokens: Vec<String> = Vec::new();
     let maximum_token_count = request.max_tokens.min(usize::MAX);
 
+    let repetition_penalty_last_n = 512;
+    let sampler_args = vec![
+        format!("topk:k={}", request.top_k),
+        format!("topp:p={}", request.top_p),
+        format!(
+            "repetition:penalty={}:last_n={}",
+            request.repeat_penalty, repetition_penalty_last_n
+        ),
+        format!("temperature:temperature={}", request.temperature),
+    ];
+    let sampler = build_sampler(0, &[], &sampler_args).unwrap();
     let stream = stream! {
     let prompt = request.prompt.into_iter().collect::<String>();
     if !prompt.is_empty() {
@@ -66,19 +78,13 @@ pub(crate) async fn completions_stream(
     // or we reach the specified limit.
     let mut tokens_processed = 0;
     let mut token_utf8_buf = TokenUtf8Buffer::new();
+
     while tokens_processed < maximum_token_count {
         let token = match session.infer_next_token(
             &*model,
             &llm::InferenceParameters {
-                sampler: Arc::new(TopPTopK {
-                    top_k: request.top_k,
-                    top_p: request.top_p,
-                    repeat_penalty: request.repeat_penalty,
-                    temperature: request.temperature,
-                    bias_tokens: TokenBias::empty(),
-                    repetition_penalty_last_n: 512, // TODO : where is this used in LLAMA ?
-                }),
-            },
+                    sampler: sampler.clone(),
+                        },
             &mut Default::default(),
             &mut rand::thread_rng(),
         ) {
@@ -118,22 +124,26 @@ pub(crate) async fn completions(
     let mut session: llm::InferenceSession = model.start_session(Default::default());
     let mut response_tokens: Vec<String> = Vec::new();
     let prompt = request.prompt.into_iter().collect::<String>();
+
+    // TODO : where is this used in LLAMA ?
+    let repetition_penalty_last_n = 512;
+    let sampler_args = vec![
+        format!("topk:k={}", request.top_k),
+        format!("topp:p={}", request.top_p),
+        format!(
+            "repetition:penalty={}:last_n={}",
+            request.repeat_penalty, repetition_penalty_last_n
+        ),
+        format!("temperature:temperature={}", request.temperature),
+    ];
+    let sampler = build_sampler(0, &[], &sampler_args).unwrap();
     let stats = session
         .infer::<Infallible>(
             &*model,
             &mut rand::thread_rng(),
             &llm::InferenceRequest {
                 prompt: llm::Prompt::Text(&prompt),
-                parameters: &llm::InferenceParameters {
-                    sampler: Arc::new(TopPTopK {
-                        top_k: request.top_k,
-                        top_p: request.top_p,
-                        repeat_penalty: request.repeat_penalty,
-                        temperature: request.temperature,
-                        bias_tokens: TokenBias::empty(),
-                        repetition_penalty_last_n: 512, // TODO : where is this used in LLAMA ?
-                    }),
-                },
+                parameters: &llm::InferenceParameters { sampler: sampler },
                 play_back_previous_tokens: false,
                 maximum_token_count: Some(request.max_tokens),
             },

@@ -29,6 +29,8 @@ pub struct Config {
     pub use_gpu: bool,
     #[serde(default)]
     pub gpu_layers: Option<usize>,
+    #[serde(default)]
+    pub n_gqa: Option<usize>,
     #[serde(default = "default_service_name")]
     pub service_name: String,
     #[serde(default)]
@@ -74,6 +76,7 @@ impl Config {
             use_gpu: self.use_gpu,
             gpu_layers: self.gpu_layers,
             rope_overrides: None,
+            n_gqa: self.n_gqa,
         }
     }
 }
