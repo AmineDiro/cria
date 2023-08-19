@@ -4,7 +4,7 @@ services:
   cria:
     build: 
       context: ../
-      dockerfile: Dockerfile-cpu
+      dockerfile: Dockerfile-gpu
     ports:
       - 3000:3000
     volumes:
@@ -14,7 +14,17 @@ services:
       - CRIA_SERVICE_NAME=cria
       - CRIA_HOST=0.0.0.0
       - CRIA_PORT=3000
+      - CRIA_USE_GPU=true
+      - CRIA_GPU_LAYERS=32
       - CRIA_ZIPKIN_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+
   zipkin-server:
     container_name: sirdai-zipkin-server
     image: openzipkin/zipkin

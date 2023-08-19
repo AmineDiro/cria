@@ -1,0 +1,18 @@
+FROM nvidia/cuda:11.8.0-devel-ubuntu22.04 as builder
+# Update default packages
+RUN apt-get update
+# Get Ubuntu packages
+RUN apt-get install -y \
+    build-essential \
+    curl xz-utils pkg-config libssl-dev zlib1g-dev libtinfo-dev libxml2-dev
+# Get Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+WORKDIR /usr/src/cria
+COPY . .
+RUN cargo build --release  --features cublas
+
+FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+RUN apt-get update & apt-get install -y extra-runtime-dependencies libssl & rm -rf /var/lib/apt/lists/*
+COPY --from=builder /usr/src/cria/target/release/cria /usr/local/bin/cria
+CMD ["cria","-a","llama","--model","/app/model.bin"]
