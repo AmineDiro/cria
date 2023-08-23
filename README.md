@@ -177,8 +177,6 @@ You can clearly see generation using my M1 GPU:
 <img src="contents/../content/generation.gif" width=1000px height=auto />
 </p>
 
-```-->
-
 ## TODO/ Roadmap:
 
 - [x] Run Llama.cpp on CPU using llm-chain
@@ -191,20 +189,16 @@ You can clearly see generation using my M1 GPU:
 - [x] Merge completions / completion_streaming routes in same endpoint
 - [x] Implement `/embeddings` route
 - [x] Implement route `/chat/completions`
-- [ ] Better errors
 - [x] Setup good tracing
+- [x] Docker deployment on CPUs / GPU
+- [x] Metrics : Prometheus
+- [ ] Better errors
 - [ ] Implement streaming chat completions SSE
-- [x] Metrics ??
 - [ ] Batching requests(ala iouring):
   - For each response put an entry in a ringbuffer queue with : Entry(Flume mpsc (resp_rx,resp_tx))
   - Spawn a model in separate task reading from ringbuffer, get entry and put each token in response
   - Construct stream from flue resp_rx chan and return SSE(stream) to user.
 
-## Routes
+## API routes
 
-- Checkout : https://platform.openai.com/docs/api-reference/
-```
-
-```
-
-```
+Details on OpenAI API docs: https://platform.openai.com/docs/api-reference/
