@@ -8,6 +8,7 @@ use llm::samplers::build_sampler;
 use llm::TokenUtf8Buffer;
 use llm::{feed_prompt_callback, InferenceError, InferenceFeedback};
 use serde::Deserialize;
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
 
@@ -89,21 +90,23 @@ pub(crate) async fn completions_stream(
             &mut rand::thread_rng(),
         ) {
             Ok(token) => token,
+            // TODO: Send an end of stream or end
             Err(InferenceError::EndOfText) => break,
             // TODO: Handle actual errors
             Err(_) => break,
         };
         tokens_processed += 1;
-        // Buffer the token until it's valid UTF-8, then call the callback.
+
+        // Buffer the token until it's valid UTF-8
         if let Some(tokens) = token_utf8_buf.push(&token) {
             yield Ok(Event::default().json_data(CompletionResponse{
                 id: format!("cmpl-{}", Uuid::new_v4().to_string()),
                 object: "text.completion.chunk".to_string(),
+                created: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() ,
                 model:"llama-2".to_string(),
                 choices: vec![ CompletionResponseChoices {
                             text: tokens,
                             index:0,
-                            // TODO : Figure out what to return here
                             logprobs: None,
                             finish_reason: None,
                         }
@@ -161,6 +164,10 @@ pub(crate) async fn completions(
     Json(CompletionResponse {
         id: format!("cmpl-{}", Uuid::new_v4().to_string()),
         object: "text_completion".to_string(),
+        created: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
         model: "Llama-2".to_string(),
         choices: vec![CompletionResponseChoices {
             text: response_tokens.into_iter().collect::<String>(),
@@ -251,6 +258,7 @@ struct CompletionResponseChoices {
 pub struct CompletionResponse {
     id: String,
     object: String,
+    created: u64,
     model: String,
     choices: Vec<CompletionResponseChoices>,
     usage: Option<Usage>,
