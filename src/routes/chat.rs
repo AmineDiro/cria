@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::vec;
 use std::{collections::HashMap, convert::Infallible};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use super::completions::{FinishReason, LogitBias, Usage};
@@ -68,10 +69,12 @@ pub fn chat_inference_callback<'a, E: std::error::Error + Send + Sync + 'static>
         _ => Ok(InferenceFeedback::Continue),
     }
 }
+
 pub(crate) async fn chat_completion(
-    State(model): State<Arc<dyn Model>>,
+    State(model): State<Arc<Mutex<Box<dyn Model>>>>,
     Json(request): Json<ChatCompletionRequest>,
 ) -> Json<ChatCompletionResponse> {
+    let model = model.lock().await;
     let mut session: llm::InferenceSession = model.start_session(Default::default());
 
     // TODO: deal with result  error
@@ -94,7 +97,7 @@ pub(crate) async fn chat_completion(
     let mut response_tokens: Vec<String> = Vec::new();
     let stats = session
         .infer::<Infallible>(
-            &*model,
+            model.as_ref(),
             &mut rand::thread_rng(),
             &llm::InferenceRequest {
                 prompt: llm::Prompt::Text(&chat_history),

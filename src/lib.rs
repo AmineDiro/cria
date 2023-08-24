@@ -11,6 +11,7 @@ use serde::{Deserialize, Deserializer};
 use std::convert::Infallible;
 use std::marker::PhantomData;
 use std::{fmt, sync::Arc};
+use tokio::sync::Mutex;
 pub mod defaults;
 use defaults::*;
 pub mod config;
@@ -42,18 +43,17 @@ pub async fn run_webserver(config: Config) {
 
     let now = std::time::Instant::now();
 
-    let model: Arc<dyn Model> = Arc::from(
-        llm::load_dynamic(
-            Some(model_architecture),
-            &model_path,
-            tokenizer_source,
-            model_params,
-            |_l| {},
-        )
-        .unwrap_or_else(|err| {
-            panic!("Failed to load {model_architecture} model from {model_path:?}: {err}")
-        }),
-    );
+    let model = llm::load_dynamic(
+        Some(model_architecture),
+        &model_path,
+        tokenizer_source,
+        model_params,
+        |_l| {},
+    )
+    .unwrap_or_else(|err| {
+        panic!("Failed to load {model_architecture} model from {model_path:?}: {err}")
+    });
+    let model = Arc::new(Mutex::new(model));
 
     tracing::info!(
         "{} - {} - fully loaded in: {}ms !",
@@ -69,11 +69,11 @@ pub async fn run_webserver(config: Config) {
     let app = Router::new()
         .route("/v1/models", get(get_models))
         .with_state(model_list)
-        .route("/v1/chat/completions", post(chat_completion))
-        .route("/v1/completions", post(compat_completions))
         .route("/v1/embeddings", post(embeddings))
-        .route("/v1/completions_full", post(completions))
-        .route("/v1/completions_stream", post(completions_stream))
+        .route("/v1/chat/completions", post(chat_completion))
+        // .route("/v1/completions", post(compat_completions))
+        // .route("/v1/completions_full", post(completions))
+        // .route("/v1/completions_stream", post(completions_stream))
         .route("/metrics", get(|| async move { metric_handle.render() }))
         .with_state(model)
         .layer(prometheus_layer)

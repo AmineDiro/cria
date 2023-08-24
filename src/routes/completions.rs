@@ -99,7 +99,7 @@ pub(crate) async fn completions_stream(
 
         // Buffer the token until it's valid UTF-8
         if let Some(tokens) = token_utf8_buf.push(&token) {
-            yield Ok(Event::default().json_data(CompletionResponse{
+            let response= CompletionResponse{
                 id: format!("cmpl-{}", Uuid::new_v4().to_string()),
                 object: "text.completion.chunk".to_string(),
                 created: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() ,
@@ -112,7 +112,10 @@ pub(crate) async fn completions_stream(
                         }
                     ],
                 usage: None,
-            }).unwrap());
+            };
+            let str_response = format!(" {}",serde_json::to_string(&response).unwrap());
+            yield Ok(Event::default().data(str_response));
+            // yield Ok(Event::default().json_data(response).unwrap());
         }
     }
     };

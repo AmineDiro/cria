@@ -18,27 +18,29 @@ fn get_embeddings(model: &dyn llm::Model, query: &str) -> (usize, Vec<f32>) {
         .map(|(_, tok)| *tok)
         .collect::<Vec<_>>();
     model.evaluate(&mut session, &query_token_ids, &mut output_request);
-    // TODO: return a result
+
+    tracing::info!("Output request : {:?}", &output_request.embeddings);
     (query_token_ids.len(), output_request.embeddings.unwrap())
 }
 
 pub(crate) async fn embeddings(
-    State(model): State<Arc<dyn Model>>,
+    State(model): State<Arc<Mutex<Box<dyn Model>>>>,
     Json(request): Json<EmbeddingRequest>,
 ) -> Json<EmbeddingResponse> {
-    // let input = request.input.into_iter().collect::<String>();
-
+    let model = model.lock().await;
     let mut data = Vec::new();
     let mut ntokens = 0;
     for input in request.input {
-        let (ntokens_input, embd) = get_embeddings(&*model, &input);
+        let (ntokens_input, embd) = get_embeddings(model.as_ref(), &input);
         ntokens += ntokens_input;
+
         data.push(EmbeddingData {
             object: "embedding".to_string(),
             index: 0,
             embedding: embd,
         })
     }
+
     Json(EmbeddingResponse {
         object: "list".to_string(),
         model: "llama-2".to_string(),
