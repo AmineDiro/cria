@@ -11,18 +11,23 @@ use serde::{Deserialize, Deserializer};
 use std::convert::Infallible;
 use std::marker::PhantomData;
 use std::{fmt, sync::Arc};
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, Mutex};
 pub mod defaults;
 use defaults::*;
 pub mod config;
 use config::Config;
 
-use crate::routes::{
-    chat::chat_completion,
-    completions::{compat_completions, completions, completions_stream},
-    embeddings::embeddings,
-    models::get_models,
+use crate::{
+    inferer::{run_inference, RequestQueue},
+    routes::{
+        chat::chat_completion,
+        // completions::{compat_completions, completions, completions_stream},
+        completions::completions_stream,
+        embeddings::embeddings,
+        models::get_models,
+    },
 };
+pub mod inferer;
 pub mod routes;
 
 pub const N_SUPPORTED_MODELS: usize = 1;
@@ -53,7 +58,12 @@ pub async fn run_webserver(config: Config) {
     .unwrap_or_else(|err| {
         panic!("Failed to load {model_architecture} model from {model_path:?}: {err}")
     });
-    let model = Arc::new(Mutex::new(model));
+
+    let (tx, rx) = flume::unbounded();
+    let queue = RequestQueue::new(tx);
+    tokio::task::spawn_blocking(move || {
+        let _ = run_inference(model, rx);
+    });
 
     tracing::info!(
         "{} - {} - fully loaded in: {}ms !",
@@ -69,13 +79,13 @@ pub async fn run_webserver(config: Config) {
     let app = Router::new()
         .route("/v1/models", get(get_models))
         .with_state(model_list)
-        .route("/v1/embeddings", post(embeddings))
-        .route("/v1/chat/completions", post(chat_completion))
+        // .route("/v1/embeddings", post(embeddings))
+        // .route("/v1/chat/completions", post(chat_completion))
         // .route("/v1/completions", post(compat_completions))
         // .route("/v1/completions_full", post(completions))
-        // .route("/v1/completions_stream", post(completions_stream))
-        .route("/metrics", get(|| async move { metric_handle.render() }))
-        .with_state(model)
+        .route("/v1/completions_stream", post(completions_stream))
+        // .route("/metrics", get(|| async move { metric_handle.render() }))
+        .with_state(queue)
         .layer(prometheus_layer)
         .layer(OtelAxumLayer::default());
 

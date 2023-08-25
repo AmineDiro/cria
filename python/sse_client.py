@@ -5,7 +5,7 @@ import time
 import sseclient
 import urllib3
 
-url = "http://localhost:3000/v1/completions"
+url = "http://localhost:3000/v1/completions_stream"
 
 
 http = urllib3.PoolManager()
