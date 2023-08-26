@@ -10,7 +10,7 @@ pub(crate) async fn embeddings(
     let (tx, rx) = flume::unbounded();
 
     let event = InferenceEvent::EmbeddingEvent(request, tx);
-    let _ = queue.append(event).await;
+    let _ = queue.push(event).await;
 
     let mut data = Vec::new();
     let mut ntokens = 0;

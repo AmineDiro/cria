@@ -35,7 +35,7 @@ pub(crate) async fn completions_stream(
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let (tx, rx) = flume::unbounded();
     let event = InferenceEvent::CompletionEvent(request, tx);
-    let _ = queue.append(event).await;
+    let _ = queue.push(event).await;
 
     let stream = stream! {
             while let Ok(streaming_response) = rx.recv_async().await{
@@ -69,7 +69,7 @@ pub(crate) async fn completions(
 ) -> Json<CompletionResponse> {
     let (tx, rx) = flume::unbounded();
     let event = InferenceEvent::CompletionEvent(request, tx);
-    let _ = queue.append(event).await;
+    let _ = queue.push(event).await;
 
     let mut response_tokens: Vec<String> = Vec::new();
     while let Ok(streaming_response) = rx.recv_async().await {

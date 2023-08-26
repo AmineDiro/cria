@@ -166,7 +166,7 @@ impl RequestQueue {
     pub(crate) fn new(queue: Sender<InferenceEvent>) -> Self {
         Self { queue }
     }
-    pub(crate) async fn append(&mut self, event: InferenceEvent) {
+    pub(crate) async fn push(&mut self, event: InferenceEvent) {
         // TODO: deal with result
         self.queue.send_async(event).await.unwrap_or_else(|err| {
             panic!(
@@ -175,8 +175,4 @@ impl RequestQueue {
             )
         })
     }
-    // fn generate_completion_stream() {}
-    // fn generate_chat_stream() {}
-    // fn generate_completion(&mut self) {}
-    // fn generate_chat() {}
 }
