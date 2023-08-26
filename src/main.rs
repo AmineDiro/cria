@@ -11,7 +11,7 @@ use cli::Args;
 pub mod config;
 use cria::config::Config;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() {
     // let args = Args::parse();
 
@@ -27,7 +27,7 @@ async fn main() {
 
     let subscriber = tracing_subscriber::fmt::layer().json();
 
-    let level = EnvFilter::new("debug".to_owned());
+    let level = EnvFilter::new("info".to_owned());
 
     let registry = tracing_subscriber::registry().with(subscriber).with(level);
 

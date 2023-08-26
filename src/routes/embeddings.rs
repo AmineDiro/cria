@@ -1,44 +1,36 @@
 use axum::{extract::State, Json};
 
-use crate::*;
-use llm;
-
-fn get_embeddings(model: &dyn llm::Model, query: &str) -> (usize, Vec<f32>) {
-    let mut session = model.start_session(Default::default());
-    let mut output_request = llm::OutputRequest {
-        all_logits: None,
-        embeddings: Some(Vec::new()),
-    };
-    let vocab = model.tokenizer();
-    let beginning_of_sentence = true;
-    let query_token_ids = vocab
-        .tokenize(query, beginning_of_sentence)
-        .unwrap()
-        .iter()
-        .map(|(_, tok)| *tok)
-        .collect::<Vec<_>>();
-    model.evaluate(&mut session, &query_token_ids, &mut output_request);
-
-    tracing::info!("Output request : {:?}", &output_request.embeddings);
-    (query_token_ids.len(), output_request.embeddings.unwrap())
-}
+use crate::{inferer::InferenceEvent, *};
+use flume;
 
 pub(crate) async fn embeddings(
-    State(model): State<Arc<Mutex<Box<dyn Model>>>>,
+    State(mut queue): State<RequestQueue>,
     Json(request): Json<EmbeddingRequest>,
 ) -> Json<EmbeddingResponse> {
-    let model = model.lock().await;
+    let (tx, rx) = flume::unbounded();
+
+    let event = InferenceEvent::EmbeddingEvent(request, tx);
+    let _ = queue.append(event).await;
+
     let mut data = Vec::new();
     let mut ntokens = 0;
-    for input in request.input {
-        let (ntokens_input, embd) = get_embeddings(model.as_ref(), &input);
-        ntokens += ntokens_input;
 
-        data.push(EmbeddingData {
-            object: "embedding".to_string(),
-            index: 0,
-            embedding: embd,
-        })
+    while let Ok(response) = rx.recv_async().await {
+        match response {
+            Ok((response_ntokens, emb)) => {
+                ntokens += response_ntokens;
+
+                data.push(EmbeddingData {
+                    object: "embedding".to_string(),
+                    index: 0,
+                    embedding: emb.unwrap_or(Vec::new()),
+                })
+            }
+            Err(_e) => {
+                //TODO!
+                tracing::error!("Error generating embedding ")
+            }
+        }
     }
 
     Json(EmbeddingResponse {
@@ -55,14 +47,14 @@ pub(crate) async fn embeddings(
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct EmbeddingRequest {
-    model: Option<String>,
+    pub model: Option<String>,
     #[serde(default, deserialize_with = "string_or_seq_string")]
-    input: Vec<String>,
-    user: Option<String>,
+    pub input: Vec<String>,
+    pub user: Option<String>,
 }
 
 #[derive(Serialize, Debug)]
-struct EmbeddingData {
+pub struct EmbeddingData {
     object: String,
     index: usize,
     embedding: Vec<f32>,

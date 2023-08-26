@@ -4,12 +4,9 @@ use axum::response::sse::{KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
 use axum::{response::sse::Event, Json};
 use futures::Stream;
-use llm::samplers::build_sampler;
-use llm::TokenUtf8Buffer;
-use llm::{feed_prompt_callback, InferenceError, InferenceFeedback};
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
 
 use crate::inferer::{InferenceEvent, RequestQueue, StreamingResponse};
@@ -17,22 +14,20 @@ use crate::*;
 
 /// Basically switches between completions and completions_stream methods
 /// depending on request `stream` value
-// pub(crate) async fn compat_completions(
-//     model: State<Arc<dyn Model>>,
-//     request: Json<CompletionRequest>,
-// ) -> Response {
-//     tracing::debug!(
-//         "Received request with streaming set to: {}",
-//         &request.stream
-//     );
-//     if !request.stream {
-//         completions(model.clone(), request).await.into_response()
-//     } else {
-//         completions_stream(model.clone(), request)
-//             .await
-//             .into_response()
-//     }
-// }
+pub(crate) async fn compat_completions(
+    queue: State<RequestQueue>,
+    request: Json<CompletionRequest>,
+) -> Response {
+    tracing::debug!(
+        "Received request with streaming set to: {}",
+        &request.stream
+    );
+    if !request.stream {
+        completions(queue, request).await.into_response()
+    } else {
+        completions_stream(queue, request).await.into_response()
+    }
+}
 
 pub(crate) async fn completions_stream(
     State(mut queue): State<RequestQueue>,
@@ -69,46 +64,21 @@ pub(crate) async fn completions_stream(
 }
 
 pub(crate) async fn completions(
-    State(model): State<Arc<dyn Model>>,
+    State(mut queue): State<RequestQueue>,
     Json(request): Json<CompletionRequest>,
 ) -> Json<CompletionResponse> {
-    let mut session: llm::InferenceSession = model.start_session(Default::default());
-    let mut response_tokens: Vec<String> = Vec::new();
-    let prompt = request.prompt.into_iter().collect::<String>();
+    let (tx, rx) = flume::unbounded();
+    let event = InferenceEvent::CompletionEvent(request, tx);
+    let _ = queue.append(event).await;
 
-    // TODO : where is this used in LLAMA ?
-    let repetition_penalty_last_n = 512;
-    let sampler_args = vec![
-        format!("topk:k={}", request.top_k),
-        format!("topp:p={}", request.top_p),
-        format!(
-            "repetition:penalty={}:last_n={}",
-            request.repeat_penalty, repetition_penalty_last_n
-        ),
-        format!("temperature:temperature={}", request.temperature),
-    ];
-    let sampler = build_sampler(0, &[], &sampler_args).unwrap();
-    let stats = session
-        .infer::<Infallible>(
-            &*model,
-            &mut rand::thread_rng(),
-            &llm::InferenceRequest {
-                prompt: llm::Prompt::Text(&prompt),
-                parameters: &llm::InferenceParameters { sampler: sampler },
-                play_back_previous_tokens: false,
-                maximum_token_count: Some(request.max_tokens),
-            },
-            &mut Default::default(),
-            |r| match r {
-                llm::InferenceResponse::PromptToken(_) => Ok(llm::InferenceFeedback::Continue),
-                llm::InferenceResponse::InferredToken(t) => {
-                    let _ = &response_tokens.push(t);
-                    Ok(llm::InferenceFeedback::Continue)
-                }
-                _ => Ok(llm::InferenceFeedback::Continue),
-            },
-        )
-        .unwrap();
+    let mut response_tokens: Vec<String> = Vec::new();
+    while let Ok(streaming_response) = rx.recv_async().await {
+        // TODO : handle error
+        if let Ok(StreamingResponse { token }) = streaming_response {
+            let _ = &response_tokens.push(token);
+        }
+    }
+
     Json(CompletionResponse {
         id: format!("cmpl-{}", Uuid::new_v4().to_string()),
         object: "text_completion".to_string(),
@@ -123,10 +93,11 @@ pub(crate) async fn completions(
             logprobs: None,
             finish_reason: Some(FinishReason::Length), // TODO: stop or length
         }],
+        // TODO: figure out where to get this from : either the inferer or completions
         usage: Some(Usage {
-            prompt_tokens: stats.prompt_tokens,
-            completion_tokens: stats.predict_tokens,
-            total_tokens: stats.prompt_tokens + stats.predict_tokens,
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
         }),
     })
 }

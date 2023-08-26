@@ -4,25 +4,22 @@ use axum::{
 };
 use axum_prometheus::PrometheusMetricLayer;
 use axum_tracing_opentelemetry::middleware::OtelAxumLayer;
-use llm::Model;
 use serde::de;
 use serde::Serialize;
 use serde::{Deserialize, Deserializer};
 use std::convert::Infallible;
+use std::fmt;
 use std::marker::PhantomData;
-use std::{fmt, sync::Arc};
-use tokio::sync::{mpsc, Mutex};
 pub mod defaults;
 use defaults::*;
 pub mod config;
 use config::Config;
 
 use crate::{
-    inferer::{run_inference, RequestQueue},
+    inferer::{inference_loop, RequestQueue},
     routes::{
-        chat::chat_completion,
-        // completions::{compat_completions, completions, completions_stream},
-        completions::completions_stream,
+        completions::{compat_completions, completions, completions_stream},
+        // chat::chat_completion,
         embeddings::embeddings,
         models::get_models,
     },
@@ -62,7 +59,7 @@ pub async fn run_webserver(config: Config) {
     let (tx, rx) = flume::unbounded();
     let queue = RequestQueue::new(tx);
     tokio::task::spawn_blocking(move || {
-        let _ = run_inference(model, rx);
+        let _ = inference_loop(model, rx);
     });
 
     tracing::info!(
@@ -79,12 +76,12 @@ pub async fn run_webserver(config: Config) {
     let app = Router::new()
         .route("/v1/models", get(get_models))
         .with_state(model_list)
-        // .route("/v1/embeddings", post(embeddings))
-        // .route("/v1/chat/completions", post(chat_completion))
-        // .route("/v1/completions", post(compat_completions))
-        // .route("/v1/completions_full", post(completions))
+        .route("/v1/completions", post(compat_completions))
+        .route("/v1/completions_full", post(completions))
         .route("/v1/completions_stream", post(completions_stream))
-        // .route("/metrics", get(|| async move { metric_handle.render() }))
+        .route("/v1/embeddings", post(embeddings))
+        // .route("/v1/chat/completions", post(chat_completion))
+        .route("/metrics", get(|| async move { metric_handle.render() }))
         .with_state(queue)
         .layer(prometheus_layer)
         .layer(OtelAxumLayer::default());
