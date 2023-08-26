@@ -17,13 +17,13 @@ pub(crate) async fn embeddings(
 
     while let Ok(response) = rx.recv_async().await {
         match response {
-            Ok((response_ntokens, emb)) => {
-                ntokens += response_ntokens;
+            Ok(embd) => {
+                ntokens += embd.ntokens;
 
                 data.push(EmbeddingData {
                     object: "embedding".to_string(),
                     index: 0,
-                    embedding: emb.unwrap_or(Vec::new()),
+                    embedding: embd.embedding.unwrap_or(Vec::new()),
                 })
             }
             Err(_e) => {
@@ -51,6 +51,12 @@ pub struct EmbeddingRequest {
     #[serde(default, deserialize_with = "string_or_seq_string")]
     pub input: Vec<String>,
     pub user: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct Embedding {
+    pub embedding: Option<Vec<f32>>,
+    pub ntokens: usize,
 }
 
 #[derive(Serialize, Debug)]

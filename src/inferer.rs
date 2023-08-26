@@ -9,6 +9,7 @@ use llm::Tokenizer;
 use llm::{feed_prompt_callback, InferenceError, InferenceFeedback};
 
 use crate::routes::completions::CompletionRequest;
+use crate::routes::embeddings::Embedding;
 use crate::routes::embeddings::EmbeddingRequest;
 
 fn stream_completion(
@@ -91,7 +92,7 @@ fn embed_string(
     session: &mut InferenceSession,
     vocab: &Tokenizer,
     query: &str,
-) -> (usize, Option<Vec<f32>>) {
+) -> Embedding {
     let mut output_request = llm::OutputRequest {
         all_logits: None,
         embeddings: Some(Vec::new()),
@@ -105,21 +106,24 @@ fn embed_string(
         .collect::<Vec<_>>();
     model.evaluate(&mut *session, &query_token_ids, &mut output_request);
 
-    (query_token_ids.len(), output_request.embeddings)
+    Embedding {
+        ntokens: query_token_ids.len(),
+        embedding: output_request.embeddings,
+    }
 }
 
 fn stream_embedding(
     model: &Box<dyn Model>,
     request: EmbeddingRequest,
-    request_tx: Sender<Result<(usize, Option<Vec<f32>>), InferenceError>>,
+    request_tx: Sender<Result<Embedding, InferenceError>>,
 ) {
     let mut session = model.start_session(Default::default());
     let vocab = model.tokenizer();
 
     for input in request.input {
-        let (ntokens, embd) = embed_string(&model, &mut session, &vocab, &input);
+        let embd = embed_string(&model, &mut session, &vocab, &input);
         let _res = request_tx
-            .send_timeout(Ok((ntokens, embd)), Duration::from_millis(10))
+            .send_timeout(Ok(embd), Duration::from_millis(10))
             .unwrap();
     }
 }
@@ -148,10 +152,7 @@ pub enum InferenceEvent {
         CompletionRequest,
         Sender<Result<StreamingResponse, InferenceError>>,
     ),
-    EmbeddingEvent(
-        EmbeddingRequest,
-        Sender<Result<(usize, Option<Vec<f32>>), InferenceError>>,
-    ),
+    EmbeddingEvent(EmbeddingRequest, Sender<Result<Embedding, InferenceError>>),
     _ChatEvent,
 }
 
