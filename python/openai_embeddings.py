@@ -12,4 +12,5 @@ def get_embedding(text: str, model="text-embedding-ada-002") -> list[float]:
 
 
 embedding = get_embedding("Your text goes here", model="llama-2")
+print(embedding)
 print(len(embedding))

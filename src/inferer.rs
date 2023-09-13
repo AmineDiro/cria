@@ -139,7 +139,9 @@ pub fn inference_loop(model: Box<dyn Model>, rx_queue: Receiver<InferenceEvent>)
             InferenceEvent::EmbeddingEvent(request, request_tx) => {
                 stream_embedding(&model, request, request_tx)
             }
-            InferenceEvent::_ChatEvent => {}
+            InferenceEvent::_ChatEvent => {
+                todo!()
+            }
         }
     }
 }
@@ -156,7 +158,7 @@ pub enum InferenceEvent {
     _ChatEvent,
 }
 
-/// Requester holding
+/// Multi producer sender queue to put requests
 #[derive(Clone)]
 pub struct RequestQueue {
     queue: Sender<InferenceEvent>,

@@ -5,6 +5,7 @@ use axum::response::{IntoResponse, Response};
 use axum::{response::sse::Event, Json};
 use futures::Stream;
 use serde::Deserialize;
+use serde_json;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
@@ -55,7 +56,11 @@ pub(crate) async fn completions_stream(
                         ],
                     usage: None,
                 };
-                yield Ok(Event::default().json_data(response).unwrap());
+                // Note: this is entirely for openai python client to work
+                // for some reason the python clients parses a SSE msg starting with b"data: " NOT b"data:"
+                // This different from the http spec : https://developer.mozilla.org/en-US/docs/Web/API/MessageEvent/data
+                let data = format!(" {}",serde_json::to_string(&response).unwrap());
+                yield Ok(Event::default().data(&data));
                 }
             }
     };
