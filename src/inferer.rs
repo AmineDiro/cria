@@ -78,11 +78,17 @@ fn stream_completion(
         };
         tokens_processed += 1;
 
-        // Buffer the token until it's valid UTF-8
         if let Some(token) = token_utf8_buf.push(&token) {
-            let _res = request_tx
-                .send_timeout(Ok(StreamingResponse { token }), Duration::from_millis(10))
-                .unwrap();
+            match request_tx
+                .send_timeout(Ok(StreamingResponse { token }), Duration::from_millis(100))
+            {
+                Ok(_) => {}
+                Err(_) => {
+                    // Stop generating this response as soon as error occurs
+                    tracing::info!("client closed channel");
+                    return;
+                }
+            };
         }
     }
 }

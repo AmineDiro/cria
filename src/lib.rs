@@ -58,6 +58,7 @@ pub async fn run_webserver(config: Config) {
 
     let (tx, rx) = flume::unbounded();
     let queue = RequestQueue::new(tx);
+
     tokio::task::spawn_blocking(move || {
         let _ = inference_loop(model, rx);
     });
