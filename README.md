@@ -192,12 +192,16 @@ You can clearly see generation using my M1 GPU:
 - [x] Setup good tracing
 - [x] Docker deployment on CPUs / GPU
 - [x] Metrics : Prometheus
-- [ ] Better errors
+- [x] Implement a global request queue
+  - [x] For each response put an entry in a queue
+  - [x] Spawn a model in separate task reading from ringbuffer, get entry and put each token in response
+  - [x] Construct stream from flume resp_rx chan and stream responses to user.
+- [ ] BETTER ERRORS and http responses (deal with all the unwrapping)
 - [ ] Implement streaming chat completions SSE
-- [ ] Batching requests(ala iouring):
-  - For each response put an entry in a ringbuffer queue with : Entry(Flume mpsc (resp_rx,resp_tx))
-  - Spawn a model in separate task reading from ringbuffer, get entry and put each token in response
-  - Construct stream from flue resp_rx chan and return SSE(stream) to user.
+- [ ] Implement request batching
+- [ ] Implement request continuous batching
+- [ ] Setup CI/CD
+- [ ] _Maybe_ Support huggingface `candle` lib for a full rust integration
 
 ## API routes
 
