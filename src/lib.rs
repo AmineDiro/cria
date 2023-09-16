@@ -18,8 +18,8 @@ use config::Config;
 use crate::{
     inferer::{inference_loop, RequestQueue},
     routes::{
+        chat::chat_completion_route,
         completions::{compat_completions, completions, completions_stream},
-        // chat::chat_completion,
         embeddings::embeddings,
         models::get_models,
     },
@@ -81,7 +81,7 @@ pub async fn run_webserver(config: Config) {
         .route("/v1/completions_full", post(completions))
         .route("/v1/completions_stream", post(completions_stream))
         .route("/v1/embeddings", post(embeddings))
-        // .route("/v1/chat/completions", post(chat_completion))
+        .route("/v1/chat/completions", post(chat_completion_route))
         .route("/metrics", get(|| async move { metric_handle.render() }))
         .with_state(queue)
         .layer(prometheus_layer)

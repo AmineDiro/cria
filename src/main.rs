@@ -13,8 +13,6 @@ use cria::config::Config;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
-    // let args = Args::parse();
-
     // hierarchical config. cli args override Env vars
     let config: Config = Figment::new()
         .merge(Env::prefixed("CRIA_"))

@@ -1,16 +1,17 @@
 use axum::extract::State;
 use axum::Json;
+use flume::Sender;
 use llm::samplers::build_sampler;
-use llm::{InferenceFeedback, InferenceResponse, Model};
+use llm::{InferenceError, InferenceFeedback, InferenceResponse, Model};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::time::Duration;
 use std::vec;
 use std::{collections::HashMap, convert::Infallible};
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use super::completions::{FinishReason, LogitBias, Usage};
 use crate::defaults::*;
+use crate::inferer::{InferenceEvent, RequestQueue};
 
 fn get_chat_history(messages: Vec<Message>) -> String {
     let mut history = String::new();
@@ -70,12 +71,12 @@ pub fn chat_inference_callback<'a, E: std::error::Error + Send + Sync + 'static>
     }
 }
 
-pub(crate) async fn chat_completion(
-    State(model): State<Arc<Mutex<Box<dyn Model>>>>,
-    Json(request): Json<ChatCompletionRequest>,
-) -> Json<ChatCompletionResponse> {
-    let model = model.lock().await;
-    let mut session: llm::InferenceSession = model.start_session(Default::default());
+pub fn chat_completion(
+    model: &Box<dyn Model>,
+    request: ChatCompletionRequest,
+    request_tx: Sender<Result<ChatCompletionResponse, InferenceError>>,
+) {
+    let mut session = model.start_session(Default::default());
 
     // TODO: deal with result  error
     // Sampler are built using the following
@@ -95,6 +96,7 @@ pub(crate) async fn chat_completion(
     let chat_history = get_chat_history(request.messages);
     tracing::debug!("Chat history : {}", &chat_history);
     let mut response_tokens: Vec<String> = Vec::new();
+    // TODO : better error handling
     let stats = session
         .infer::<Infallible>(
             model.as_ref(),
@@ -109,7 +111,8 @@ pub(crate) async fn chat_completion(
             chat_inference_callback("USER", |r| response_tokens.push(r)),
         )
         .unwrap();
-    Json(ChatCompletionResponse {
+
+    let response = ChatCompletionResponse {
         id: format!("cmpl-{}", Uuid::new_v4().to_string()),
         object: "text_completion".to_string(),
         model: "Llama-2".to_string(),
@@ -126,7 +129,27 @@ pub(crate) async fn chat_completion(
             completion_tokens: stats.predict_tokens,
             total_tokens: stats.prompt_tokens + stats.predict_tokens,
         }),
-    })
+    };
+
+    // TODO: deal with sending error
+    match request_tx.send_timeout(Ok(response), Duration::from_millis(100)) {
+        Ok(_) => {}
+        Err(_) => {
+            tracing::info!("client closed channel")
+        }
+    }
+}
+
+pub(crate) async fn chat_completion_route(
+    State(mut queue): State<RequestQueue>,
+    Json(request): Json<ChatCompletionRequest>,
+) -> Json<ChatCompletionResponse> {
+    let (tx, rx) = flume::unbounded();
+    let event = InferenceEvent::ChatEvent(request, tx);
+    let _ = queue.push(event).await;
+    // TODO : deal with errors
+    let chat_response = rx.recv_async().await.unwrap();
+    Json(chat_response.unwrap())
 }
 
 #[derive(Serialize, Deserialize, Debug)]

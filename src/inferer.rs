@@ -8,6 +8,9 @@ use llm::TokenUtf8Buffer;
 use llm::Tokenizer;
 use llm::{feed_prompt_callback, InferenceError, InferenceFeedback};
 
+use crate::routes::chat::chat_completion;
+use crate::routes::chat::ChatCompletionRequest;
+use crate::routes::chat::ChatCompletionResponse;
 use crate::routes::completions::CompletionRequest;
 use crate::routes::embeddings::Embedding;
 use crate::routes::embeddings::EmbeddingRequest;
@@ -145,8 +148,8 @@ pub fn inference_loop(model: Box<dyn Model>, rx_queue: Receiver<InferenceEvent>)
             InferenceEvent::EmbeddingEvent(request, request_tx) => {
                 stream_embedding(&model, request, request_tx)
             }
-            InferenceEvent::_ChatEvent => {
-                todo!()
+            InferenceEvent::ChatEvent(request, request_tx) => {
+                chat_completion(&model, request, request_tx)
             }
         }
     }
@@ -161,7 +164,10 @@ pub enum InferenceEvent {
         Sender<Result<StreamingResponse, InferenceError>>,
     ),
     EmbeddingEvent(EmbeddingRequest, Sender<Result<Embedding, InferenceError>>),
-    _ChatEvent,
+    ChatEvent(
+        ChatCompletionRequest,
+        Sender<Result<ChatCompletionResponse, InferenceError>>,
+    ),
 }
 
 /// Multi producer sender queue to put requests
