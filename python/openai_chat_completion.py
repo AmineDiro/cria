@@ -7,6 +7,7 @@ openai.api_base = "http://localhost:3000/v1"
 
 completion = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",
+    max_tokens=512,
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
         {

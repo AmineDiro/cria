@@ -1,12 +1,13 @@
 use axum::{
     routing::{get, post},
-    Router,
+    Json, Router,
 };
 use axum_prometheus::PrometheusMetricLayer;
 use axum_tracing_opentelemetry::middleware::OtelAxumLayer;
 use serde::de;
 use serde::Serialize;
 use serde::{Deserialize, Deserializer};
+use serde_json::Value;
 use std::convert::Infallible;
 use std::fmt;
 use std::marker::PhantomData;
@@ -77,6 +78,7 @@ pub async fn run_webserver(config: Config) {
     let app = Router::new()
         .route("/v1/models", get(get_models))
         .with_state(model_list)
+        .route("/v1/health", get(health_check))
         .route("/v1/completions", post(compat_completions))
         .route("/v1/completions_full", post(completions))
         .route("/v1/completions_stream", post(completions_stream))
@@ -126,4 +128,12 @@ where
     }
 
     deserializer.deserialize_any(StringOrVec(PhantomData))
+}
+
+async fn health_check() -> Json<Value> {
+    let json_response = serde_json::json!({
+        "status": "Cria is running !",
+    });
+
+    Json(json_response)
 }
