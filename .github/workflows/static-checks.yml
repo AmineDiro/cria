@@ -16,20 +16,8 @@ jobs:
     steps: # The steps of the job
       - uses: actions/checkout@v3  # Checks-out your repository under `$GITHUB_WORKSPACE`
 
-      # Cache the cargo registry, which speeds up subsequent cargo install steps
-      - name: Cache Cargo registry
-        uses: actions/cache@v2
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
-
-      # Cache the compilation metadata (fingerprint) of your dependencies
-      # to allow cargo to determine if a rebuild is needed.
-      - name: Cache build fingerprint
-        uses: actions/cache@v2
-        with:
-          path: target/debug/.fingerprint
-          key: ${{ runner.os }}-build-fingerprint-${{ hashFiles('**/Cargo.toml') }}
+      # Caching
+      - uses: Swatinem/rust-cache@v2
 
       - name: Set up Rust  # Sets up a Rust environment
         uses: actions-rs/toolchain@v1  # GitHub action to install the Rust toolchain
