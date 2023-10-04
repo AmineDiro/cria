@@ -2,7 +2,6 @@ import json
 import os
 import sys
 import time
-from collections import deque
 from concurrent.futures import ProcessPoolExecutor
 
 import sseclient
@@ -59,8 +58,4 @@ if __name__ == "__main__":
     #     sse_request(p)
 
     with ProcessPoolExecutor(4) as e:
-        reqs = e.map(sse_request, prompts)
-
-    drain = deque(maxlen=0).extend
-
-    drain(reqs)
+        e.map(sse_request, prompts)
