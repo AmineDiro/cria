@@ -72,7 +72,7 @@ pub fn chat_inference_callback<'a, E: std::error::Error + Send + Sync + 'static>
 }
 
 pub fn chat_completion(
-    model: &Box<dyn Model>,
+    model: &dyn Model,
     request: ChatCompletionRequest,
     request_tx: Sender<Result<ChatCompletionResponse, InferenceError>>,
 ) {
@@ -99,11 +99,11 @@ pub fn chat_completion(
     // TODO : better error handling
     let stats = session
         .infer::<Infallible>(
-            model.as_ref(),
+            model,
             &mut rand::thread_rng(),
             &llm::InferenceRequest {
                 prompt: llm::Prompt::Text(&chat_history),
-                parameters: &llm::InferenceParameters { sampler: sampler },
+                parameters: &llm::InferenceParameters { sampler },
                 play_back_previous_tokens: false,
                 maximum_token_count: Some(request.max_tokens),
             },
@@ -113,7 +113,7 @@ pub fn chat_completion(
         .unwrap();
 
     let response = ChatCompletionResponse {
-        id: format!("cmpl-{}", Uuid::new_v4().to_string()),
+        id: format!("cmpl-{}", Uuid::new_v4()),
         object: "text_completion".to_string(),
         model: "Llama-2".to_string(),
         choices: vec![ChatCompletionResponseChoices {

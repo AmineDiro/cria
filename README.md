@@ -7,9 +7,14 @@ The llama2 model **runs on GPU** using `ggml-sys` crate with specific compilatio
 
 ### Using Docker (recommended way)
 
-The easiest way of getting started is using the official Docker container. Make sure you have `docker` and `docker-compose` installed on your machine (example install for [ubuntu20.04](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04)).
+The easiest way of getting started is using the official Docker container. Make sure you have `docker`
+and `docker-compose` installed on your machine (example install
+for [ubuntu20.04](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04)).
 
-`cria` provides two docker images : one for CPU only deployments and a second GPU accelerated image. To use GPU image, you need to install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). We also recommend using NVIDIA drivers with CUDA version 11.7 or higher.
+`cria` provides two docker images : one for CPU only deployments and a second GPU accelerated image. To use GPU image,
+you need to install
+the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+We also recommend using NVIDIA drivers with CUDA version 11.7 or higher.
 
 To deploy the `cria` gpu version using `docker-compose`:
 
@@ -20,7 +25,9 @@ git clone git@github.com:AmineDiro/cria.git
 cd cria/docker
 ```
 
-2. The api will load the model located in `/app/model.bin` by default. You should change the docker-compose file with ggml model path for docker to bind mount. You can also change environement variables for your specific config. Alternatively, the easiest way is to set `CRIA_MODEL_PATH` in a`docker/.env` :
+2. The api will load the model located in `/app/model.bin` by default. You should change the docker-compose file with
+   ggml model path for docker to bind mount. You can also change environement variables for your specific config.
+   Alternatively, the easiest way is to set `CRIA_MODEL_PATH` in a`docker/.env` :
 
 ```bash
 # .env
@@ -59,17 +66,18 @@ docker compose up -f docker-compose-gpu.yaml -d
    cargo b --release
    ```
 
-   - For `cuBLAS` (nvidia GPU ) acceleration use
-     ```bash
-     cargo b --release --features cublas
-     ```
-   - For `metal` acceleration use
-     ```bash
-     cargo b --release --features metal
-     ```
-     > ❗ NOTE: If you have issues building for GPU, checkout the building issues section
+    - For `cuBLAS` (nvidia GPU ) acceleration use
+      ```bash
+      cargo b --release --features cublas
+      ```
+    - For `metal` acceleration use
+      ```bash
+      cargo b --release --features metal
+      ```
+      > ❗ NOTE: If you have issues building for GPU, checkout the building issues section
 
-3. Download GGML `.bin` LLama-2 quantized model (for example [llama-2-7b](https://huggingface.co/TheBloke/Llama-2-7B-GGML/tree/main))
+3. Download GGML `.bin` LLama-2 quantized model (for
+   example [llama-2-7b](https://huggingface.co/TheBloke/Llama-2-7B-GGML/tree/main))
 4. Run API, use the `use-gpu` flag to offload model layers to your GPU
    ```bash
    ./target/cria -a llama --model {MODEL_BIN_PATH} --use-gpu --gpu-layers 32
@@ -77,7 +85,8 @@ docker compose up -f docker-compose-gpu.yaml -d
 
 ## Command line arguments reference
 
-All the parameters can be passed as environment variables or command line arguments. Here is the reference for the command line arguments:
+All the parameters can be passed as environment variables or command line arguments. Here is the reference for the
+command line arguments:
 
 ```bash
 ./target/cria --help
@@ -102,7 +111,8 @@ Options:
   -h, --help                                         Print help
 ```
 
-For environment variables, just prefix the argument with `CRIA_` and use uppercase letters. For example, to set the model path, you can use `CRIA_MODEL` environment variable.
+For environment variables, just prefix the argument with `CRIA_` and use uppercase letters. For example, to set the
+model path, you can use `CRIA_MODEL` environment variable.
 
 There is a an example `docker/.env.sample` file in the project root directory.
 
@@ -139,33 +149,32 @@ import urllib3
 
 url = "http://localhost:3000/v1/completions"
 
-
 http = urllib3.PoolManager()
 response = http.request(
-    "POST",
-    url,
-    preload_content=False,
-    headers={
-        "Content-Type": "application/json",
-    },
-    body=json.dumps(
-        {
-            "prompt": "Morocco is a beautiful country situated in north africa.",
-            "temperature": 0.1,
-        }
-    ),
+	"POST",
+	url,
+	preload_content=False,
+	headers={
+		"Content-Type": "application/json",
+	},
+	body=json.dumps(
+		{
+			"prompt": "Morocco is a beautiful country situated in north africa.",
+			"temperature": 0.1,
+		}
+	),
 )
 
 client = sseclient.SSEClient(response)
 
 s = time.perf_counter()
 for event in client.events():
-    chunk = json.loads(event.data)
-    sys.stdout.write(chunk["choices"][0]["text"])
-    sys.stdout.flush()
+	chunk = json.loads(event.data)
+	sys.stdout.write(chunk["choices"][0]["text"])
+	sys.stdout.flush()
 e = time.perf_counter()
 
-print(f"\nGeneration from completion took {e-s:.2f} !")
+print(f"\nGeneration from completion took {e - s:.2f} !")
 
 ```
 
@@ -193,9 +202,9 @@ You can clearly see generation using my M1 GPU:
 - [x] Docker deployment on CPUs / GPU
 - [x] Metrics : Prometheus
 - [x] Implement a global request queue
-  - [x] For each response put an entry in a queue
-  - [x] Spawn a model in separate task reading from ringbuffer, get entry and put each token in response
-  - [x] Construct stream from flume resp_rx chan and stream responses to user.
+    - [x] For each response put an entry in a queue
+    - [x] Spawn a model in separate task reading from ringbuffer, get entry and put each token in response
+    - [x] Construct stream from flume resp_rx chan and stream responses to user.
 - [ ] BETTER ERRORS and http responses (deal with all the unwrapping)
 - [ ] Implement streaming chat completions SSE
 - [ ] Implement request batching

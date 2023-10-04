@@ -43,7 +43,7 @@ pub(crate) async fn completions_stream(
                 // TODO : handle error
                 if let Ok(StreamingResponse{token}) = streaming_response {
                 let response= CompletionResponse{
-                    id: format!("cmpl-{}", Uuid::new_v4().to_string()),
+                    id: format!("cmpl-{}", Uuid::new_v4()),
                     object: "text.completion.chunk".to_string(),
                     created: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() ,
                     model:"llama-2".to_string(),
@@ -85,7 +85,7 @@ pub(crate) async fn completions(
     }
 
     Json(CompletionResponse {
-        id: format!("cmpl-{}", Uuid::new_v4().to_string()),
+        id: format!("cmpl-{}", Uuid::new_v4()),
         object: "text_completion".to_string(),
         created: SystemTime::now()
             .duration_since(UNIX_EPOCH)

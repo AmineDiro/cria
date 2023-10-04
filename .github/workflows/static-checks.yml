@@ -1,0 +1,50 @@
+name: Static Checks
+
+on: # Defines when the action should occur
+  push: # Will be triggered on every `push` event
+    branches: [ "master", "main" ]  # The branches that the `push` events have to happen on
+  pull_request: # Will be triggered on every `pull_request` event
+    branches: [ "master", "main" ]  # The branches that the `pull_request` events have to happen on
+
+env:
+  CARGO_TERM_COLOR: always  # This environment variable makes sure Cargo's output is always colored
+
+jobs:
+  build: # The name of the job
+    runs-on: ubuntu-latest  # The type of machine to run the job on
+
+    steps: # The steps of the job
+      - uses: actions/checkout@v3  # Checks-out your repository under `$GITHUB_WORKSPACE`
+
+      # Cache the cargo registry, which speeds up subsequent cargo install steps
+      - name: Cache Cargo registry
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
+
+      # Cache the compilation metadata (fingerprint) of your dependencies
+      # to allow cargo to determine if a rebuild is needed.
+      - name: Cache build fingerprint
+        uses: actions/cache@v2
+        with:
+          path: target/debug/.fingerprint
+          key: ${{ runner.os }}-build-fingerprint-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Set up Rust  # Sets up a Rust environment
+        uses: actions-rs/toolchain@v1  # GitHub action to install the Rust toolchain
+        with:
+          profile: minimal  # The type of installation to perform
+          toolchain: 1.72.0  # The version of the toolchain to install
+          override: true  # Whether to install the toolchain as the default
+      - name: Install clippy  # Install clippy for the repo
+        run: rustup component add clippy  # The command to install clippy
+
+      - name: Build  # Build the project
+        run: cargo build --verbose  # The command to build the project
+
+      - name: Run tests  # Run the tests for the project
+        run: cargo test --verbose  # The command to run the tests for the project
+
+      - name: Run clippy  # Run clippy on the project
+        run: cargo clippy -- -D warnings  # The command to run clippy and fail on warnings
