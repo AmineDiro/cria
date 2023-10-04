@@ -12,7 +12,6 @@ use std::convert::Infallible;
 use std::fmt;
 use std::marker::PhantomData;
 pub mod defaults;
-use defaults::*;
 pub mod config;
 use config::Config;
 
@@ -61,7 +60,7 @@ pub async fn run_webserver(config: Config) {
     let queue = RequestQueue::new(tx);
 
     tokio::task::spawn_blocking(move || {
-        let _ = inference_loop(model, rx);
+        inference_loop(model, rx);
     });
 
     tracing::info!(
@@ -72,7 +71,7 @@ pub async fn run_webserver(config: Config) {
     );
 
     let model_list = ModelList {
-        models: ["llama-2".into()],
+        models: [model_architecture.to_string()],
     };
 
     let app = Router::new()

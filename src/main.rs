@@ -4,7 +4,7 @@ use figment::{
     providers::{Env, Serialized},
     Figment,
 };
-use opentelemetry::global;
+use opentelemetry::global::{set_text_map_propagator, shutdown_tracer_provider};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 pub mod cli;
 use cli::Args;
@@ -21,11 +21,11 @@ async fn main() {
         .unwrap();
 
     // setup opentelemetry
-    opentelemetry::global::set_text_map_propagator(opentelemetry_zipkin::Propagator::new());
+    set_text_map_propagator(opentelemetry_zipkin::Propagator::new());
 
     let subscriber = tracing_subscriber::fmt::layer().json();
 
-    let level = EnvFilter::new("info".to_owned());
+    let level = EnvFilter::new("info");
 
     let registry = tracing_subscriber::registry().with(subscriber).with(level);
 
@@ -47,5 +47,5 @@ async fn main() {
     }
 
     run_webserver(config).await;
-    global::shutdown_tracer_provider();
+    shutdown_tracer_provider();
 }
