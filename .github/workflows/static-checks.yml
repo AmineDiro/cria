@@ -16,9 +16,6 @@ jobs:
     steps: # The steps of the job
       - uses: actions/checkout@v3  # Checks-out your repository under `$GITHUB_WORKSPACE`
 
-      # Caching
-      - uses: Swatinem/rust-cache@v2
-
       - name: Set up Rust  # Sets up a Rust environment
         uses: actions-rs/toolchain@v1  # GitHub action to install the Rust toolchain
         with:
@@ -27,6 +24,9 @@ jobs:
           override: true  # Whether to install the toolchain as the default
       - name: Install clippy  # Install clippy for the repo
         run: rustup component add clippy  # The command to install clippy
+
+      # Caching
+      - uses: Swatinem/rust-cache@v2
 
       - name: Build  # Build the project
         run: cargo build --verbose  # The command to build the project
