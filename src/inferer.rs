@@ -16,7 +16,7 @@ use crate::routes::embeddings::Embedding;
 use crate::routes::embeddings::EmbeddingRequest;
 
 fn stream_completion(
-    model: &Box<dyn Model>,
+    model: &dyn Model,
     request: CompletionRequest,
     request_tx: Sender<Result<StreamingResponse, InferenceError>>,
 ) {
@@ -41,7 +41,7 @@ fn stream_completion(
     if !prompt.is_empty() {
         session
             .feed_prompt(
-                model.as_ref(),
+                model,
                 llm::Prompt::Text(&prompt),
                 &mut Default::default(),
                 feed_prompt_callback::<_>(|r| match r {
@@ -66,7 +66,7 @@ fn stream_completion(
 
     while tokens_processed < maximum_token_count {
         let token = match session.infer_next_token(
-            model.as_ref(),
+            model,
             &llm::InferenceParameters {
                 sampler: sampler.clone(),
             },
@@ -97,7 +97,7 @@ fn stream_completion(
 }
 
 fn embed_string(
-    model: &Box<dyn Model>,
+    model: &dyn Model,
     session: &mut InferenceSession,
     vocab: &Tokenizer,
     query: &str,
@@ -122,7 +122,7 @@ fn embed_string(
 }
 
 fn stream_embedding(
-    model: &Box<dyn Model>,
+    model: &dyn Model,
     request: EmbeddingRequest,
     request_tx: Sender<Result<Embedding, InferenceError>>,
 ) {
@@ -130,8 +130,8 @@ fn stream_embedding(
     let vocab = model.tokenizer();
 
     for input in request.input {
-        let embd = embed_string(&model, &mut session, &vocab, &input);
-        let _res = request_tx
+        let embd = embed_string(model, &mut session, vocab, &input);
+        request_tx
             .send_timeout(Ok(embd), Duration::from_millis(10))
             .unwrap();
     }
@@ -143,13 +143,13 @@ pub fn inference_loop(model: Box<dyn Model>, rx_queue: Receiver<InferenceEvent>)
     while let Ok(inference_request) = rx_queue.recv() {
         match inference_request {
             InferenceEvent::CompletionEvent(request, request_tx) => {
-                stream_completion(&model, request, request_tx)
+                stream_completion(model.as_ref(), request, request_tx)
             }
             InferenceEvent::EmbeddingEvent(request, request_tx) => {
-                stream_embedding(&model, request, request_tx)
+                stream_embedding(model.as_ref(), request, request_tx)
             }
             InferenceEvent::ChatEvent(request, request_tx) => {
-                chat_completion(&model, request, request_tx)
+                chat_completion(model.as_ref(), request, request_tx)
             }
         }
     }
