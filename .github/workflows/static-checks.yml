@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always  # This environment variable makes sure Cargo's output is always colored
 
 jobs:
-  static-checks: # The name of the job
+  static-checks-windows-linux: # The name of the job
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
@@ -40,7 +40,7 @@ jobs:
       - name: Run clippy  # Run clippy on the project
         run: cargo clippy -- -D warnings  # The command to run clippy and fail on warnings
 
-  build-macOS:
+  static-checks-macos:
     strategy:
       matrix:
         args: ['', '-F metal']
