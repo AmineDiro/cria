@@ -10,8 +10,11 @@ env:
   CARGO_TERM_COLOR: always  # This environment variable makes sure Cargo's output is always colored
 
 jobs:
-  build: # The name of the job
-    runs-on: ubuntu-latest  # The type of machine to run the job on
+  static-checks: # The name of the job
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}  # The type of machine to run the job on
 
     steps: # The steps of the job
       - uses: actions/checkout@v3  # Checks-out your repository under `$GITHUB_WORKSPACE`
@@ -36,3 +39,33 @@ jobs:
 
       - name: Run clippy  # Run clippy on the project
         run: cargo clippy -- -D warnings  # The command to run clippy and fail on warnings
+
+  build-macOS:
+    strategy:
+      matrix:
+        args: ['', '-F metal']
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.72.0
+          override: true
+
+      - name: Install clippy
+        run: rustup component add clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --verbose ${{ matrix.args }}
+
+      - name: Run tests
+        run: cargo test --verbose ${{ matrix.args }}
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
