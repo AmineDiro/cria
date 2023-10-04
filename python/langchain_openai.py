@@ -1,14 +1,8 @@
 import os
-
-from langchain.callbacks.manager import CallbackManager
 from langchain.llms import OpenAI
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from langchain.callbacks import StreamingStdOutCallbackHandler
+from langchain import PromptTemplate, LLMChain
 
 os.environ["OPENAI_API_KEY"] = "api_key"
-
-callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
 
 
 template = """
@@ -19,9 +13,10 @@ ASSISTANT:
 """
 
 prompt = PromptTemplate(template=template, input_variables=["question"])
-llm = OpenAI(openai_api_base="http://localhost:3000/v1", streaming=True, callback_manager=callback_manager)
+llm = OpenAI(openai_api_base="http://localhost:3000/v1")
 llm_chain = LLMChain(prompt=prompt, llm=llm)
 
 question = "What can I do about glenoid cavity injury ?"
 
 result = llm_chain.run(question)
+print(result)
