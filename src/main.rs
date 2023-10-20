@@ -25,7 +25,7 @@ async fn main() {
 
     let subscriber = tracing_subscriber::fmt::layer().json();
 
-    let level = EnvFilter::new("info".to_owned());
+    let level = EnvFilter::new("info");
 
     let registry = tracing_subscriber::registry().with(subscriber).with(level);
 
@@ -39,7 +39,7 @@ async fn main() {
             .with_collector_endpoint(zipkin_endpoint)
             .install_batch(opentelemetry::runtime::Tokio)
             .expect("unable to install zipkin tracer");
-        let tracer = tracing_opentelemetry::layer().with_tracer(tracer.clone());
+        let tracer = tracing_opentelemetry::layer().with_tracer(tracer);
 
         registry.with(tracer).init();
     } else {

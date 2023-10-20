@@ -1,6 +1,10 @@
+use async_stream::stream;
 use axum::extract::State;
+use axum::response::sse::{Event, KeepAlive};
+use axum::response::{IntoResponse, Response, Sse};
 use axum::Json;
 use flume::Sender;
+use futures::Stream;
 use llm::samplers::build_sampler;
 use llm::{InferenceError, InferenceFeedback, InferenceResponse, Model};
 use serde::{Deserialize, Serialize};
@@ -11,9 +15,9 @@ use uuid::Uuid;
 
 use super::completions::{FinishReason, LogitBias, Usage};
 use crate::defaults::*;
-use crate::inferer::{InferenceEvent, RequestQueue};
+use crate::inferer::{InferenceEvent, RequestQueue, StreamingResponse};
 
-fn get_chat_history(messages: Vec<Message>) -> String {
+fn get_chat_history(messages: Vec<ChatMessage>) -> String {
     let mut history = String::new();
     for msg in messages {
         match msg.role {
@@ -71,10 +75,10 @@ pub fn chat_inference_callback<'a, E: std::error::Error + Send + Sync + 'static>
     }
 }
 
-pub fn chat_completion(
-    model: &Box<dyn Model>,
+pub fn streaming_chat_completion(
+    model: &dyn Model,
     request: ChatCompletionRequest,
-    request_tx: Sender<Result<ChatCompletionResponse, InferenceError>>,
+    request_tx: Sender<Result<StreamingResponse, InferenceError>>,
 ) {
     let mut session = model.start_session(Default::default());
 
@@ -95,52 +99,89 @@ pub fn chat_completion(
 
     let chat_history = get_chat_history(request.messages);
     tracing::debug!("Chat history : {}", &chat_history);
-    let mut response_tokens: Vec<String> = Vec::new();
+
     // TODO : better error handling
-    let stats = session
+    // Stream stats to the full route
+    let _stats = session
         .infer::<Infallible>(
-            model.as_ref(),
+            model,
             &mut rand::thread_rng(),
             &llm::InferenceRequest {
                 prompt: llm::Prompt::Text(&chat_history),
-                parameters: &llm::InferenceParameters { sampler: sampler },
+                parameters: &llm::InferenceParameters { sampler },
                 play_back_previous_tokens: false,
                 maximum_token_count: Some(request.max_tokens),
             },
             &mut Default::default(),
-            chat_inference_callback("USER", |r| response_tokens.push(r)),
+            chat_inference_callback("USER", |token| {
+                match request_tx
+                    .send_timeout(Ok(StreamingResponse { token }), Duration::from_millis(100))
+                {
+                    Ok(_) => {}
+                    Err(_) => {
+                        tracing::info!("chat client closed channel")
+                    }
+                }
+            }),
         )
         .unwrap();
 
-    let response = ChatCompletionResponse {
-        id: format!("cmpl-{}", Uuid::new_v4().to_string()),
-        object: "text_completion".to_string(),
-        model: "Llama-2".to_string(),
-        choices: vec![ChatCompletionResponseChoices {
-            index: 0,
-            finish_reason: Some(FinishReason::Length), // TODO: stop or length
-            message: Message {
-                role: Role::Assistant,
-                content: response_tokens.into_iter().collect::<String>(),
-            },
-        }],
-        usage: Some(Usage {
-            prompt_tokens: stats.prompt_tokens,
-            completion_tokens: stats.predict_tokens,
-            total_tokens: stats.prompt_tokens + stats.predict_tokens,
-        }),
-    };
-
     // TODO: deal with sending error
-    match request_tx.send_timeout(Ok(response), Duration::from_millis(100)) {
-        Ok(_) => {}
-        Err(_) => {
-            tracing::info!("client closed channel")
-        }
+}
+
+pub(crate) async fn compat_chat_completions(
+    queue: State<RequestQueue>,
+    request: Json<ChatCompletionRequest>,
+) -> Response {
+    tracing::debug!(
+        "Received request with streaming set to: {}",
+        &request.stream
+    );
+    if !request.stream {
+        chat_completion(queue, request).await.into_response()
+    } else {
+        chat_completion_stream_route(queue, request)
+            .await
+            .into_response()
     }
 }
 
-pub(crate) async fn chat_completion_route(
+pub(crate) async fn chat_completion_stream_route(
+    State(mut queue): State<RequestQueue>,
+    Json(request): Json<ChatCompletionRequest>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let (tx, rx) = flume::unbounded();
+    let event = InferenceEvent::ChatEvent(request, tx);
+    let _ = queue.push(event).await;
+    let stream = stream! {
+
+    while let Ok(streaming_response) = rx.recv_async().await {
+        // TODO : handle error
+        if let Ok(StreamingResponse { token }) = streaming_response {
+        let response =ChatCompletionResponse {
+        id: format!("cmpl-{}", Uuid::new_v4().to_string()),
+        object: "chat.completion.chunk".to_string(),
+        model: "Llama-2".to_string(),
+        choices: vec![ChatCompletionResponseChoices {
+            index: 0,
+            finish_reason: None,
+            message: Message::Delta(ChatMessage {role: Role::Assistant, content: token }        )}],
+        usage: Some(Usage {
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
+        })
+        };
+
+        let data = format!(" {}",serde_json::to_string(&response).unwrap());
+        yield Ok(Event::default().data(&data));
+    }
+    }
+    };
+    Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+pub(crate) async fn chat_completion(
     State(mut queue): State<RequestQueue>,
     Json(request): Json<ChatCompletionRequest>,
 ) -> Json<ChatCompletionResponse> {
@@ -148,8 +189,33 @@ pub(crate) async fn chat_completion_route(
     let event = InferenceEvent::ChatEvent(request, tx);
     let _ = queue.push(event).await;
     // TODO : deal with errors
-    let chat_response = rx.recv_async().await.unwrap();
-    Json(chat_response.unwrap())
+    let mut response_tokens: Vec<String> = Vec::new();
+    while let Ok(streaming_response) = rx.recv_async().await {
+        // TODO : handle error
+        if let Ok(StreamingResponse { token }) = streaming_response {
+            let _ = &response_tokens.push(token);
+        }
+    }
+    Json(ChatCompletionResponse {
+        id: format!("cmpl-{}", Uuid::new_v4().to_string()),
+        object: "chat.completion".to_string(),
+        model: "Llama-2".to_string(),
+        choices: vec![ChatCompletionResponseChoices {
+            index: 0,
+            finish_reason: Some(FinishReason::Length), // TODO: stop or length
+            message: Message::Message(ChatMessage {
+                role: Role::Assistant,
+                content: response_tokens.into_iter().collect::<String>(),
+            }),
+        }],
+
+        // TODO : Return inference metrics
+        usage: Some(Usage {
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
+        }),
+    })
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -160,14 +226,22 @@ pub enum Role {
     Assistant,
 }
 #[derive(Serialize, Deserialize, Debug)]
-struct Message {
+struct ChatMessage {
     role: Role,
     content: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
+enum Message {
+    Message(ChatMessage),
+    Delta(ChatMessage),
 }
 
 #[derive(Serialize, Debug)]
 struct ChatCompletionResponseChoices {
     index: usize,
+    #[serde(flatten)]
     message: Message,
     finish_reason: Option<FinishReason>,
 }
@@ -184,7 +258,7 @@ pub struct ChatCompletionResponse {
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct ChatCompletionRequest {
-    messages: Vec<Message>,
+    messages: Vec<ChatMessage>,
     #[serde(default = "default_max_tokens")]
     max_tokens: usize,
     #[serde(default = "default_temperature")]
@@ -197,7 +271,7 @@ pub struct ChatCompletionRequest {
     mirostat_tau: f32,
     #[serde(default = "default_microstat_eta")]
     mirostat_eta: f32,
-    /// Whether to use SSE streaming with the stream terminated by a data: [DONE]
+    // Whether to use SSE streaming with the stream terminated by a data: [DONE]
     #[serde(default = "default_stream")]
     stream: bool,
     stop: Option<Vec<String>>,
