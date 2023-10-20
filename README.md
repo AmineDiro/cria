@@ -189,19 +189,19 @@ You can clearly see generation using my M1 GPU:
 - [x] Merge completions / completion_streaming routes in same endpoint
 - [x] Implement `/embeddings` route
 - [x] Implement route `/chat/completions`
-- [x] Setup good tracing
-- [x] Docker deployment on CPUs / GPU
-- [x] Metrics : Prometheus
+- [x] Setup good tracing (Thanks to @aparo)
+- [x] Docker deployment on CPU/GPU
+- [x] Metrics : Prometheus (Thanks to @aparo)
 - [x] Implement a global request queue
   - [x] For each response put an entry in a queue
   - [x] Spawn a model in separate task reading from ringbuffer, get entry and put each token in response
   - [x] Construct stream from flume resp_rx chan and stream responses to user.
 - [x] Implement streaming chat completions SSE
+- [x] Setup CI/CD (thanks to @Benjamint22 )
 - [ ] BETTER ERRORS and http responses (deal with all the unwrapping)
 - [ ] Implement request batching
 - [ ] Implement request continuous batching
-- [ ] Setup CI/CD
-- [ ] _Maybe_ Support huggingface `candle` lib for a full rust integration
+- [ ] _Maybe_ Support huggingface `candle` lib for a full rust integration 🤔 ?
 
 ## API routes
 
