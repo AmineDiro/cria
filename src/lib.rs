@@ -19,7 +19,7 @@ use config::Config;
 use crate::{
     inferer::{inference_loop, RequestQueue},
     routes::{
-        chat::chat_completion_route,
+        chat::{chat_completion, chat_completion_stream_route, compat_chat_completions},
         completions::{compat_completions, completions, completions_stream},
         embeddings::embeddings,
         models::get_models,
@@ -61,7 +61,7 @@ pub async fn run_webserver(config: Config) {
     let queue = RequestQueue::new(tx);
 
     tokio::task::spawn_blocking(move || {
-        let _ = inference_loop(model, rx);
+        inference_loop(model, rx);
     });
 
     tracing::info!(
@@ -79,11 +79,16 @@ pub async fn run_webserver(config: Config) {
         .route("/v1/models", get(get_models))
         .with_state(model_list)
         .route("/v1/health", get(health_check))
+        .route("/v1/embeddings", post(embeddings))
         .route("/v1/completions", post(compat_completions))
         .route("/v1/completions_full", post(completions))
         .route("/v1/completions_stream", post(completions_stream))
-        .route("/v1/embeddings", post(embeddings))
-        .route("/v1/chat/completions", post(chat_completion_route))
+        .route("/v1/chat/completions", post(compat_chat_completions))
+        .route("/v1/chat/completions_full", post(chat_completion))
+        .route(
+            "/v1/chat/completions_stream",
+            post(chat_completion_stream_route),
+        )
         .route("/metrics", get(|| async move { metric_handle.render() }))
         .with_state(queue)
         .layer(prometheus_layer)
