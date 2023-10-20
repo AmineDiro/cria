@@ -196,8 +196,8 @@ You can clearly see generation using my M1 GPU:
   - [x] For each response put an entry in a queue
   - [x] Spawn a model in separate task reading from ringbuffer, get entry and put each token in response
   - [x] Construct stream from flume resp_rx chan and stream responses to user.
+- [x] Implement streaming chat completions SSE
 - [ ] BETTER ERRORS and http responses (deal with all the unwrapping)
-- [ ] Implement streaming chat completions SSE
 - [ ] Implement request batching
 - [ ] Implement request continuous batching
 - [ ] Setup CI/CD
